@@ -44,22 +44,6 @@
 
   .main { padding: 24px; max-width: 1600px; margin: 0 auto; }
 
-  /* Upload */
-  .upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 36px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--surface);
-    margin-bottom: 20px;
-  }
-  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: #1e2235; }
-  .upload-zone input[type=file] { display: none; }
-  .upload-zone .upload-icon { font-size: 34px; margin-bottom: 8px; }
-  .upload-zone p { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
-  .upload-zone strong { color: var(--text); }
 
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
@@ -277,14 +261,9 @@
 
 <div class="main">
 
-  <div class="upload-zone" id="uploadZone">
-    <input type="file" id="fileInput" accept=".xlsx,.csv,.xls" multiple>
-    <div class="upload-icon">📂</div>
-    <p><strong>Drop Arioneo XLSX or CSV files here</strong> or click to browse</p>
-    <p>Multiple files supported · Sessions aggregated per horse · Best performances shown</p>
-    <br>
+  <div style="display:flex; gap:8px; margin-bottom:20px;">
+    <input type="file" id="fileInput" accept=".xlsx,.csv,.xls" multiple style="display:none">
     <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Choose Files</button>
-    &nbsp;
     <button class="btn btn-ghost" id="clearBtn" style="display:none">✕ Clear All</button>
   </div>
 
@@ -639,19 +618,7 @@ function loadSessions() {
 }
 
 // ─── File handling ────────────────────────────────────────────────────────────
-const fileInput  = document.getElementById('fileInput');
-const uploadZone = document.getElementById('uploadZone');
-
-uploadZone.addEventListener('click', (e) => {
-  if (e.target.tagName === 'BUTTON') return;
-  fileInput.click();
-});
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault(); uploadZone.classList.remove('dragover');
-  handleFiles([...e.dataTransfer.files]);
-});
+const fileInput = document.getElementById('fileInput');
 fileInput.addEventListener('change', () => { handleFiles([...fileInput.files]); fileInput.value=''; });
 
 function handleFiles(files) {
