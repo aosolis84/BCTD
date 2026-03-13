@@ -341,6 +341,7 @@ const COLS = [
   { key: 'sessions',     label: 'Sessions',        type: 'number' },
   { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
   { key: 'age',          label: 'Age',             type: 'number' },
+  { key: 'sex',          label: 'Sex',             type: 'string' },
   { key: 'best1F',       label: 'Best 1F',         type: 'time'   },
   { key: 'best5F',       label: 'Best 5F',         type: 'time'   },
   { key: 'fastRecovery', label: 'Fast Recovery',   type: 'number' },
@@ -381,6 +382,7 @@ function buildMap(headers) {
     best4F:       find('time best 4f', 'time best 4f '),
     best5F:       find('time best 5f', 'time best 5f '),
     best6F:       find('time best 6f', 'time best 6f '),
+    best7F:       find('time best 7f', 'time best 7f '),
     fastRecovery: find('fast recovery'),
     fastRecQual:  find('fast recovery quality'),
     rec15min:     find('heart rate after 15 min', 'hr after 15 min'),
@@ -505,6 +507,7 @@ function parseRows(rows) {
       country:      getStr(map.country) || '—',
       date:         dateObj,
       age:          parseInt(getStr(map.age))    || null,
+      sex:          getStr(map.sex) || '—',
       trainingType: getStr(map.trainingType),
       trackName:    getStr(map.trackName),
       trackSurface: getStr(map.trackSurface),
@@ -518,6 +521,7 @@ function parseRows(rows) {
       best4F:       parseTimeStr(get(map.best4F)),
       best5F:       parseTimeStr(get(map.best5F)),
       best6F:       parseTimeStr(get(map.best6F)),
+      best7F:       parseTimeStr(get(map.best7F)),
       fastRecovery: parseInt(getStr(map.fastRecovery)) || null,
       fastRecQual:  getStr(map.fastRecQual),
       rec15min:     parseInt(getStr(map.rec15min))     || null,
@@ -540,6 +544,7 @@ function aggregateHorses(sessions) {
         lastTraining: null,
         lastTrainingTs: 0,
         age:          s.age,
+        sex:          s.sex,
         best1F:       null,
         best5F:       null,
         fastRecovery: null,
@@ -560,8 +565,9 @@ function aggregateHorses(sessions) {
       h.lastTraining   = s.date;
     }
 
-    // Age (use latest)
+    // Age / Sex (use latest)
     if (s.age !== null) h.age = s.age;
+    if (s.sex && s.sex !== '—') h.sex = s.sex;
 
     // Best 1F: minimum time
     if (s.best1F !== null && (h.best1F === null || s.best1F < h.best1F)) {
@@ -772,6 +778,7 @@ function renderTable(rows) {
       <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
       <td class="dim">${fmtDate(h.lastTraining)}</td>
       <td>${h.age !== null ? h.age + ' yr' : '—'}</td>
+      <td class="dim">${esc(h.sex || '—')}</td>
       <td class="time-val">${fmtTime(h.best1F)}</td>
       <td class="time-val">${fmtTime(h.best5F)}</td>
       <td>${frLabel}</td>
@@ -862,6 +869,7 @@ function renderDetailInner(horse) {
       <td class="time-val">${fmtTime(s.best4F)}</td>
       <td class="time-val${mark5F}">${fmtTime(s.best5F)}</td>
       <td class="time-val">${fmtTime(s.best6F)}</td>
+      <td class="time-val">${fmtTime(s.best7F)}</td>
       <td class="dim">${maxHR}</td>
       <td>${frCell}</td>
       <td>${r15Cell}</td>
@@ -881,6 +889,7 @@ function renderDetailInner(horse) {
         <th>4F</th>
         <th>5F ★</th>
         <th>6F</th>
+        <th>7F</th>
         <th>Max HR</th>
         <th>Fast Rec</th>
         <th>15 Min Rec</th>
