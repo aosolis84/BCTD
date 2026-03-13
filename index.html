@@ -153,52 +153,26 @@
   .q-poor .quality-dot { background: var(--red); }
   .q-na        { color: var(--text-dim); }
 
-  /* Expandable rows */
   tbody tr.horse-row { cursor: pointer; }
-  tbody tr.horse-row:hover { background: var(--surface2); }
-  tbody tr.horse-row.expanded { background: #1c1f30; }
-  tbody tr.horse-row.expanded:hover { background: #1c1f30; }
 
-  .chevron {
-    display: inline-block; margin-right: 8px; font-size: 10px;
-    color: var(--text-dim); transition: transform 0.2s; vertical-align: middle;
-  }
-  tr.expanded .chevron { transform: rotate(90deg); color: var(--accent); }
-
-  tr.detail-row td {
-    padding: 0;
-    background: #13151f;
-    border-bottom: 2px solid var(--accent) !important;
-  }
-
-  .detail-inner {
-    padding: 12px 20px 16px 36px;
-    overflow-x: auto;
-  }
-
-  .detail-inner table {
-    font-size: 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    min-width: 700px;
-  }
-
-  .detail-inner thead { background: #1e2235; }
-
-  .detail-inner th {
-    font-size: 10px; padding: 7px 12px;
-    color: var(--text-dim); cursor: default;
+  /* Detail page */
+  .detail-page-title {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
+    margin-bottom: 16px; padding-bottom: 14px;
     border-bottom: 1px solid var(--border);
-    text-transform: uppercase; letter-spacing: 0.4px;
   }
-  .detail-inner th:hover { color: var(--text-dim); }
-
-  .detail-inner td { padding: 7px 12px; border-bottom: 1px solid #1e2235; }
-  .detail-inner tbody tr:last-child td { border-bottom: none; }
-  .detail-inner tbody tr:hover { background: #1a1d2a; }
-
-  .detail-inner .best-mark { color: var(--accent-hover); font-weight: 600; }
+  .cols-panel {
+    min-width: 220px; max-height: 380px; overflow-y: auto;
+    padding: 6px 0;
+  }
+  .cols-panel label {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 16px; cursor: pointer; font-size: 13px; color: var(--text);
+    transition: background 0.1s; user-select: none;
+  }
+  .cols-panel label:hover { background: #2a2f47; }
+  .cols-panel input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
+  .best-mark { color: var(--accent-hover); font-weight: 600; }
 
   /* Empty state */
   .empty-state { text-align: center; padding: 60px 24px; color: var(--text-dim); }
@@ -314,6 +288,21 @@
 
 </div>
 
+<!-- Horse detail page -->
+<div id="detailView" style="display:none" class="main">
+  <div class="detail-page-title" id="detailTitle"></div>
+  <div class="toolbar">
+    <button class="btn btn-primary" id="homeBtn">← Home</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn btn-ghost" id="detailExportBtn">↓ Export</button>
+    <div class="dropdown" id="colsDropdown">
+      <button class="btn btn-ghost" id="colsBtn">Columns ▾</button>
+      <div class="dropdown-menu cols-panel" id="colsPanel"></div>
+    </div>
+  </div>
+  <div id="detailTableContainer"></div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -356,11 +345,57 @@ function logout() {
 document.addEventListener('DOMContentLoaded', loadSessions);
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let allSessions  = [];   // raw session rows
-let allHorses    = [];   // aggregated per horse
-let sortCol      = 'lastTraining';
-let sortDir      = 'desc';
-let expandedSet  = new Set(); // horse names currently expanded
+let allSessions    = [];
+let allHorses      = [];
+let sortCol        = 'lastTraining';
+let sortDir        = 'desc';
+let currentHorse   = null;
+
+// ─── Detail page column definitions ──────────────────────────────────────────
+const DETAIL_COLS = [
+  { key: 'date',            label: 'Date',          def: true  },
+  { key: 'trainingType',    label: 'Type',          def: true  },
+  { key: 'trackName',       label: 'Track',         def: true  },
+  { key: 'trackSurface',    label: 'Surface',       def: true  },
+  { key: 'workingDist',     label: 'Distance',      def: true  },
+  { key: 'avgSpeed',        label: 'Avg Speed',     def: true  },
+  { key: 'maxSpeed',        label: 'Max Speed',     def: true  },
+  { key: 'best1F',          label: 'Best 1F',       def: true  },
+  { key: 'best2F',          label: 'Best 2F',       def: true  },
+  { key: 'best3F',          label: 'Best 3F',       def: true  },
+  { key: 'best4F',          label: 'Best 4F',       def: true  },
+  { key: 'best5F',          label: 'Best 5F',       def: true  },
+  { key: 'best6F',          label: 'Best 6F',       def: true  },
+  { key: 'best7F',          label: 'Best 7F',       def: true  },
+  { key: 'maxHR',           label: 'Max HR',        def: true  },
+  { key: 'fastRecovery',    label: 'Fast Rec',      def: true  },
+  { key: 'fastRecQual',     label: 'Fast Quality',  def: true  },
+  { key: 'fastRecPct',      label: 'Fast %',        def: true  },
+  { key: 'rec15min',        label: '15 Recovery',   def: true  },
+  { key: 'rec15qual',       label: '15 Quality',    def: true  },
+  { key: 'rec15pct',        label: 'HR 15%',        def: true  },
+  { key: 'maxSL',           label: 'Max SL',        def: false },
+  { key: 'slGallop',        label: 'SL Gallop',     def: false },
+  { key: 'sfGallop',        label: 'SF Gallop',     def: false },
+  { key: 'slWork',          label: 'SL Work',       def: false },
+  { key: 'sfWork',          label: 'SF Work',       def: false },
+  { key: 'hr2min',          label: 'HR 2 min',      def: false },
+  { key: 'hr5min',          label: 'HR 5 min',      def: false },
+  { key: 'symmetry',        label: 'Symmetry',      def: false },
+  { key: 'regularity',      label: 'Regularity',    def: false },
+  { key: 'workingDuration', label: 'Duration',      def: false },
+  { key: 'timeTo120',       label: 'Time to 120bpm',def: false },
+  { key: 'durationZone5',   label: 'Zone 5 Dur',    def: false },
+  { key: 'temperature',     label: 'Temperature',   def: false },
+  { key: 'trottingHR',      label: 'Trot HR',       def: false },
+  { key: 'walkingHR',       label: 'Walk HR',       def: false },
+];
+
+const COLS_STORAGE_KEY = 'ht_detail_cols_v1';
+let visibleDetailCols = new Set(
+  JSON.parse(localStorage.getItem(COLS_STORAGE_KEY) ?? 'null') ??
+  DETAIL_COLS.filter(c => c.def).map(c => c.key)
+);
 
 // ─── Column definitions for display ──────────────────────────────────────────
 const COLS = [
@@ -410,13 +445,30 @@ function buildMap(headers) {
     best5F:       find('time best 5f', 'time best 5f '),
     best6F:       find('time best 6f', 'time best 6f '),
     best7F:       find('time best 7f', 'time best 7f '),
-    fastRecovery: find('fast recovery'),
-    fastRecQual:  find('fast recovery quality'),
-    rec15min:     find('heart rate after 15 min', 'hr after 15 min'),
-    rec15qual:    find('15min recovery quality', '15 min recovery quality'),
-    maxHR:        find('max heart rate reached during training', 'max heart rate'),
-    owner:        find('owner', 'proprietaire', 'proprietario'),
-    country:      find('country', 'pays', 'nation'),
+    fastRecovery:    find('fast recovery'),
+    fastRecQual:     find('fast recovery quality'),
+    fastRecPct:      find('fast recovery in % of max hr'),
+    rec15min:        find('heart rate after 15 min', 'hr after 15 min'),
+    rec15qual:       find('15min recovery quality', '15 min recovery quality'),
+    rec15pct:        find('hr after 15 min in % of max hr'),
+    maxHR:           find('max heart rate reached during training', 'max heart rate'),
+    workingDuration: find('working duration'),
+    maxSL:           find('max stride length'),
+    slGallop:        find('stride length at 20.5 mph'),
+    sfGallop:        find('stride frequency at 20.5 mph'),
+    slWork:          find('stride length at 37.3 mph'),
+    sfWork:          find('stride frequency at 37.3 mph'),
+    hr2min:          find('heart rate after 2 min'),
+    hr5min:          find('heart rate after 5 min'),
+    symmetry:        find('mean symmetry first trot'),
+    regularity:      find('mean regularity first trot'),
+    timeTo120:       find('time to 120 bpm'),
+    durationZone5:   find('duration effort zone 5'),
+    temperature:     find('temperature'),
+    trottingHR:      find('trotting average heart rate'),
+    walkingHR:       find('walking average hr'),
+    owner:           find('owner', 'proprietaire', 'proprietario'),
+    country:         find('country', 'pays', 'nation'),
   };
 }
 
@@ -549,10 +601,27 @@ function parseRows(rows) {
       best5F:       parseTimeStr(get(map.best5F)),
       best6F:       parseTimeStr(get(map.best6F)),
       best7F:       parseTimeStr(get(map.best7F)),
-      fastRecovery: parseInt(getStr(map.fastRecovery)) || null,
-      fastRecQual:  getStr(map.fastRecQual),
-      rec15min:     parseInt(getStr(map.rec15min))     || null,
-      rec15qual:    getStr(map.rec15qual),
+      fastRecovery:    parseInt(getStr(map.fastRecovery))    || null,
+      fastRecQual:     getStr(map.fastRecQual),
+      fastRecPct:      parseFloat(getStr(map.fastRecPct))    || null,
+      rec15min:        parseInt(getStr(map.rec15min))        || null,
+      rec15qual:       getStr(map.rec15qual),
+      rec15pct:        parseFloat(getStr(map.rec15pct))      || null,
+      workingDuration: getStr(map.workingDuration)           || null,
+      maxSL:           parseFloat(getStr(map.maxSL))         || null,
+      slGallop:        parseFloat(getStr(map.slGallop))      || null,
+      sfGallop:        parseFloat(getStr(map.sfGallop))      || null,
+      slWork:          parseFloat(getStr(map.slWork))        || null,
+      sfWork:          parseFloat(getStr(map.sfWork))        || null,
+      hr2min:          parseInt(getStr(map.hr2min))          || null,
+      hr5min:          parseInt(getStr(map.hr5min))          || null,
+      symmetry:        parseFloat(getStr(map.symmetry))      || null,
+      regularity:      parseFloat(getStr(map.regularity))    || null,
+      timeTo120:       getStr(map.timeTo120)                 || null,
+      durationZone5:   getStr(map.durationZone5)            || null,
+      temperature:     parseFloat(getStr(map.temperature))   || null,
+      trottingHR:      parseInt(getStr(map.trottingHR))      || null,
+      walkingHR:       parseInt(getStr(map.walkingHR))       || null,
     });
   }
   return sessions;
@@ -810,20 +879,22 @@ function exportAllSessionsToExcel() {
 function exportHorseToExcel(horseName) {
   const horse = allHorses.find(h => h.name === horseName);
   if (!horse) return;
+  const cols = DETAIL_COLS.filter(c => visibleDetailCols.has(c.key));
   const sessions = [...horse.sessionsList].sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
+
+  function rawVal(s, key) {
+    const timeCols = ['best1F','best2F','best3F','best4F','best5F','best6F','best7F'];
+    if (timeCols.includes(key)) return fmtTime(s[key]);
+    if (key === 'date') return s.date ? fmtDate(s.date) : '—';
+    const v = s[key];
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'number' && !Number.isInteger(v)) return parseFloat(v.toFixed(2));
+    return v;
+  }
+
   const data = [
-    ['Date', 'Distance', 'Avg Speed', 'Max Speed', '1F', '2F', '3F', '4F', '5F', '6F', '7F', 'Max HR', 'Fast Recovery', '15 Min Recovery'],
-    ...sessions.map(s => [
-      s.date ? fmtDate(s.date) : '—',
-      s.workingDist !== null ? s.workingDist.toFixed(2) + ' f' : '—',
-      s.avgSpeed    !== null ? s.avgSpeed.toFixed(1) + ' mph'  : '—',
-      s.maxSpeed    !== null ? s.maxSpeed.toFixed(1) + ' mph'  : '—',
-      fmtTime(s.best1F), fmtTime(s.best2F), fmtTime(s.best3F), fmtTime(s.best4F),
-      fmtTime(s.best5F), fmtTime(s.best6F), fmtTime(s.best7F),
-      s.maxHR       !== null ? s.maxHR + ' bpm' : '—',
-      s.fastRecovery !== null ? s.fastRecovery + ' bpm' + (s.fastRecQual && s.fastRecQual !== 'N/A' ? ' · ' + s.fastRecQual : '') : '—',
-      s.rec15min     !== null ? s.rec15min     + ' bpm' + (s.rec15qual  && s.rec15qual  !== 'N/A' ? ' · ' + s.rec15qual  : '') : '—',
-    ])
+    cols.map(c => c.label),
+    ...sessions.map(s => cols.map(c => rawVal(s, c.key)))
   ];
   const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
@@ -879,7 +950,6 @@ function renderTable(rows) {
   }).join('');
 
   const bodyRows = rows.map(h => {
-    const isOpen = expandedSet.has(h.name);
     const frClass  = h.fastRecQual ? qualityClass(h.fastRecQual) : bpmClass(h.fastRecovery);
     const r15Class = h.rec15qual   ? qualityClass(h.rec15qual)   : bpmClass(h.rec15min);
 
@@ -891,8 +961,8 @@ function renderTable(rows) {
       ? `<span class="quality ${r15Class}"><span class="quality-dot"></span>${h.rec15min} bpm${h.rec15qual && h.rec15qual!=='N/A' ? ' · '+h.rec15qual : ''}</span>`
       : '—';
 
-    const mainRow = `<tr class="horse-row${isOpen?' expanded':''}" data-horse="${esc(h.name)}">
-      <td class="horse-name"><span class="chevron">▶</span>${esc(h.name)}</td>
+    return `<tr class="horse-row" data-horse="${esc(h.name)}">
+      <td class="horse-name">${esc(h.name)}</td>
       <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
       <td class="dim">${fmtDate(h.lastTraining)}</td>
       <td>${h.age !== null ? h.age + ' yr' : '—'}</td>
@@ -902,12 +972,6 @@ function renderTable(rows) {
       <td>${frLabel}</td>
       <td>${r15Label}</td>
     </tr>`;
-
-    const detailRow = isOpen
-      ? `<tr class="detail-row" data-detail="${esc(h.name)}"><td colspan="${COLS.length}">${renderDetailInner(h)}</td></tr>`
-      : `<tr class="detail-row" data-detail="${esc(h.name)}" style="display:none"><td colspan="${COLS.length}"></td></tr>`;
-
-    return mainRow + detailRow;
   }).join('');
 
   container.innerHTML = `
@@ -928,97 +992,143 @@ function renderTable(rows) {
     });
   });
 
-  // Row expand/collapse
+  // Row click → navigate to horse detail page
   container.querySelectorAll('tr.horse-row').forEach(tr => {
     tr.addEventListener('click', () => {
-      const name = tr.dataset.horse;
-      const horse = allHorses.find(h => h.name === name);
-      if (!horse) return;
-
-      const detailTr = tr.nextElementSibling;
-      if (expandedSet.has(name)) {
-        expandedSet.delete(name);
-        tr.classList.remove('expanded');
-        detailTr.style.display = 'none';
-      } else {
-        expandedSet.add(name);
-        tr.classList.add('expanded');
-        detailTr.querySelector('td').innerHTML = renderDetailInner(horse);
-        detailTr.style.display = '';
-      }
+      const horse = allHorses.find(h => h.name === tr.dataset.horse);
+      if (horse) showHorseDetail(horse);
     });
   });
 }
 
-function renderDetailInner(horse) {
-  // Sort sessions newest first
+// ─── Horse detail page ────────────────────────────────────────────────────────
+function showHorseDetail(horse) {
+  currentHorse = horse;
+  document.querySelector('.main').style.display = 'none';
+  document.getElementById('detailView').style.display = 'block';
+  document.getElementById('detailTitle').textContent = horse.name + ' — Training Details';
+  renderDetailPage(horse);
+  buildColsPanel();
+}
+
+function showMainView() {
+  currentHorse = null;
+  document.getElementById('detailView').style.display = 'none';
+  document.querySelector('.main').style.display = 'block';
+}
+
+function renderDetailPage(horse) {
   const sessions = [...horse.sessionsList].sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
+  const cols = DETAIL_COLS.filter(c => visibleDetailCols.has(c.key));
 
-  // Find best values to highlight
-  const best1F = Math.min(...sessions.map(s => s.best1F ?? Infinity));
-  const best5F = Math.min(...sessions.map(s => s.best5F ?? Infinity));
+  // Compute best values per column for highlighting
+  const best = {};
+  const timeCols = ['best1F','best2F','best3F','best4F','best5F','best6F','best7F'];
+  timeCols.forEach(k => {
+    const vals = sessions.map(s => s[k]).filter(v => v !== null);
+    best[k] = vals.length ? Math.min(...vals) : null;
+  });
+  const speedVals = sessions.map(s => s.maxSpeed).filter(v => v !== null);
+  best.maxSpeed = speedVals.length ? Math.max(...speedVals) : null;
+  const frVals = sessions.map(s => s.fastRecovery).filter(v => v !== null);
+  best.fastRecovery = frVals.length ? Math.min(...frVals) : null;
+  const r15Vals = sessions.map(s => s.rec15min).filter(v => v !== null);
+  best.rec15min = r15Vals.length ? Math.min(...r15Vals) : null;
 
-  const sessionRows = sessions.map(s => {
-    const mark1F = s.best1F !== null && s.best1F === best1F ? ' best-mark' : '';
-    const mark5F = s.best5F !== null && s.best5F === best5F ? ' best-mark' : '';
-    const frC  = s.fastRecQual ? qualityClass(s.fastRecQual) : bpmClass(s.fastRecovery);
-    const r15C = s.rec15qual   ? qualityClass(s.rec15qual)   : bpmClass(s.rec15min);
-
-    const frCell = s.fastRecovery !== null
-      ? `<span class="quality ${frC}"><span class="quality-dot"></span>${s.fastRecovery}${s.fastRecQual && s.fastRecQual!=='N/A' ? ' · '+s.fastRecQual : ''}</span>`
-      : '—';
-    const r15Cell = s.rec15min !== null
-      ? `<span class="quality ${r15C}"><span class="quality-dot"></span>${s.rec15min}${s.rec15qual && s.rec15qual!=='N/A' ? ' · '+s.rec15qual : ''}</span>`
-      : '—';
-
-    const dist  = s.workingDist !== null ? s.workingDist.toFixed(2) + ' f' : '—';
-    const avg   = s.avgSpeed    !== null ? s.avgSpeed.toFixed(1) + ' mph'  : '—';
-    const maxS  = s.maxSpeed    !== null ? s.maxSpeed.toFixed(1) + ' mph'  : '—';
-    const maxHR = s.maxHR       !== null ? s.maxHR + ' bpm'               : '—';
-
-    return `<tr>
-      <td class="dim">${fmtDate(s.date)}</td>
-      <td>${dist}</td>
-      <td>${avg}</td>
-      <td>${maxS}</td>
-      <td class="time-val${mark1F}">${fmtTime(s.best1F)}</td>
-      <td class="time-val">${fmtTime(s.best2F)}</td>
-      <td class="time-val">${fmtTime(s.best3F)}</td>
-      <td class="time-val">${fmtTime(s.best4F)}</td>
-      <td class="time-val${mark5F}">${fmtTime(s.best5F)}</td>
-      <td class="time-val">${fmtTime(s.best6F)}</td>
-      <td class="time-val">${fmtTime(s.best7F)}</td>
-      <td class="dim">${maxHR}</td>
-      <td>${frCell}</td>
-      <td>${r15Cell}</td>
-    </tr>`;
+  const headers = cols.map(c => `<th>${c.label}</th>`).join('');
+  const bodyRows = sessions.map(s => {
+    const cells = cols.map(c => renderDetailCell(s, c.key, best)).join('');
+    return `<tr>${cells}</tr>`;
   }).join('');
 
-  return `<div class="detail-inner">
-    <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
-      <button class="btn btn-ghost" onclick="exportHorseToExcel('${esc(horse.name)}')">↓ Export Excel</button>
-    </div>
-    <table>
-      <thead><tr>
-        <th>Date</th>
-        <th>Distance</th>
-        <th>Avg Speed</th>
-        <th>Max Speed</th>
-        <th>1F ★</th>
-        <th>2F</th>
-        <th>3F</th>
-        <th>4F</th>
-        <th>5F ★</th>
-        <th>6F</th>
-        <th>7F</th>
-        <th>Max HR</th>
-        <th>Fast Rec</th>
-        <th>15 Min Rec</th>
-      </tr></thead>
-      <tbody>${sessionRows}</tbody>
-    </table>
-  </div>`;
+  document.getElementById('detailTableContainer').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
 }
+
+function renderDetailCell(s, key, best) {
+  const fmt = v => v !== null && v !== undefined ? v : '—';
+  const isBest = (val, bestVal) => val !== null && bestVal !== null && val === bestVal;
+  switch (key) {
+    case 'date':          return `<td class="dim">${fmtDate(s.date)}</td>`;
+    case 'trainingType':  return `<td class="dim">${esc(s.trainingType || '—')}</td>`;
+    case 'trackName':     return `<td class="dim">${esc(s.trackName || '—')}</td>`;
+    case 'trackSurface':  return `<td class="dim">${esc(s.trackSurface || '—')}</td>`;
+    case 'workingDist':   return `<td>${s.workingDist !== null ? s.workingDist.toFixed(2) : '—'}</td>`;
+    case 'avgSpeed':      return `<td>${s.avgSpeed !== null ? s.avgSpeed.toFixed(1) : '—'}</td>`;
+    case 'maxSpeed':      return `<td class="${isBest(s.maxSpeed, best.maxSpeed) ? 'best-mark' : ''}">${s.maxSpeed !== null ? s.maxSpeed.toFixed(1) : '—'}</td>`;
+    case 'best1F': case 'best2F': case 'best3F': case 'best4F':
+    case 'best5F': case 'best6F': case 'best7F': {
+      const v = s[key];
+      return `<td class="time-val${isBest(v, best[key]) ? ' best-mark' : ''}">${fmtTime(v)}</td>`;
+    }
+    case 'maxHR':         return `<td class="dim">${fmt(s.maxHR)}</td>`;
+    case 'fastRecovery': {
+      const cls = s.fastRecQual ? qualityClass(s.fastRecQual) : bpmClass(s.fastRecovery);
+      const mk = isBest(s.fastRecovery, best.fastRecovery) ? ' best-mark' : '';
+      return `<td><span class="quality ${cls}${mk}"><span class="quality-dot"></span>${fmt(s.fastRecovery)}</span></td>`;
+    }
+    case 'fastRecQual':   return `<td class="${qualityClass(s.fastRecQual)}">${esc(s.fastRecQual || '—')}</td>`;
+    case 'fastRecPct':    return `<td>${s.fastRecPct !== null ? s.fastRecPct.toFixed(1) + '%' : '—'}</td>`;
+    case 'rec15min': {
+      const cls = s.rec15qual ? qualityClass(s.rec15qual) : bpmClass(s.rec15min);
+      const mk = isBest(s.rec15min, best.rec15min) ? ' best-mark' : '';
+      return `<td><span class="quality ${cls}${mk}"><span class="quality-dot"></span>${fmt(s.rec15min)}</span></td>`;
+    }
+    case 'rec15qual':     return `<td class="${qualityClass(s.rec15qual)}">${esc(s.rec15qual || '—')}</td>`;
+    case 'rec15pct':      return `<td>${s.rec15pct !== null ? s.rec15pct.toFixed(1) + '%' : '—'}</td>`;
+    case 'maxSL':         return `<td>${s.maxSL !== null ? s.maxSL.toFixed(2) : '—'}</td>`;
+    case 'slGallop':      return `<td>${s.slGallop !== null ? s.slGallop.toFixed(2) : '—'}</td>`;
+    case 'sfGallop':      return `<td>${s.sfGallop !== null ? s.sfGallop.toFixed(2) : '—'}</td>`;
+    case 'slWork':        return `<td>${s.slWork !== null ? s.slWork.toFixed(2) : '—'}</td>`;
+    case 'sfWork':        return `<td>${s.sfWork !== null ? s.sfWork.toFixed(2) : '—'}</td>`;
+    case 'hr2min':        return `<td>${fmt(s.hr2min)}</td>`;
+    case 'hr5min':        return `<td>${fmt(s.hr5min)}</td>`;
+    case 'symmetry':      return `<td>${s.symmetry !== null ? s.symmetry.toFixed(1) : '—'}</td>`;
+    case 'regularity':    return `<td>${s.regularity !== null ? s.regularity.toFixed(1) : '—'}</td>`;
+    case 'workingDuration': return `<td class="dim">${esc(s.workingDuration || '—')}</td>`;
+    case 'timeTo120':     return `<td>${esc(s.timeTo120 || '—')}</td>`;
+    case 'durationZone5': return `<td>${esc(s.durationZone5 || '—')}</td>`;
+    case 'temperature':   return `<td>${s.temperature !== null ? s.temperature.toFixed(1) : '—'}</td>`;
+    case 'trottingHR':    return `<td>${fmt(s.trottingHR)}</td>`;
+    case 'walkingHR':     return `<td>${fmt(s.walkingHR)}</td>`;
+    default:              return `<td>—</td>`;
+  }
+}
+
+function buildColsPanel() {
+  const panel = document.getElementById('colsPanel');
+  panel.innerHTML = DETAIL_COLS.map(c => `
+    <label>
+      <input type="checkbox" data-col="${c.key}" ${visibleDetailCols.has(c.key) ? 'checked' : ''}>
+      ${c.label}
+    </label>`).join('');
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) visibleDetailCols.add(cb.dataset.col);
+      else visibleDetailCols.delete(cb.dataset.col);
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify([...visibleDetailCols]));
+      if (currentHorse) renderDetailPage(currentHorse);
+    });
+  });
+}
+
+document.getElementById('homeBtn').addEventListener('click', showMainView);
+
+const colsDropdown = document.getElementById('colsDropdown');
+document.getElementById('colsBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  colsDropdown.classList.toggle('open');
+});
+document.addEventListener('click', () => colsDropdown.classList.remove('open'));
+
+document.getElementById('detailExportBtn').addEventListener('click', () => {
+  if (currentHorse) exportHorseToExcel(currentHorse.name);
+});
 
 document.getElementById('searchInput').addEventListener('input', render);
 
