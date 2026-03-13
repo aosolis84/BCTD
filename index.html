@@ -245,6 +245,34 @@
     border-radius: var(--radius); transition: color 0.15s;
   }
   .logout-btn:hover { color: var(--text); }
+
+  .sync-status-btn {
+    font-size: 12px; color: var(--text-dim);
+    background: none; border: none; cursor: pointer; padding: 4px 8px;
+    border-radius: var(--radius); transition: color 0.15s; white-space: nowrap;
+  }
+  .sync-status-btn:hover { color: var(--text); }
+  .sync-status-btn.synced  { color: var(--green); }
+  .sync-status-btn.syncing { color: var(--yellow); }
+  .sync-status-btn.sync-error { color: var(--red); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; max-width: 440px; width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .modal-box h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .modal-box > p { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.6; }
+  .modal-box a { color: var(--accent); }
+  .modal-box input { width: 100%; margin-bottom: 4px; font-family: monospace; letter-spacing: 0.5px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+  .modal-status { font-size: 12px; color: var(--text-dim); margin-top: 10px; min-height: 16px; }
 </style>
 </head>
 <body>
@@ -264,6 +292,7 @@
     <h1>Horse Training Data</h1>
     <div class="subtitle">Arioneo / Equimetre — XLSX &amp; CSV</div>
   </div>
+  <button class="sync-status-btn" id="syncBtn">☁ Set up sync</button>
   <button class="logout-btn" onclick="logout()" title="Log out">⎋ Log out</button>
 </header>
 
@@ -312,6 +341,23 @@
     </div>
   </div>
   <div id="detailTableContainer"></div>
+</div>
+
+<div class="modal-overlay" id="syncModal">
+  <div class="modal-box">
+    <h3>☁ Cloud Sync via GitHub Gist</h3>
+    <p>
+      Your training data is saved in a private GitHub Gist and loads automatically on any device after login.<br><br>
+      <a href="https://github.com/settings/tokens/new?scopes=gist&description=Horse+Training+Sync" target="_blank">Create a GitHub token</a> with the <strong>gist</strong> scope, then paste it below.
+    </p>
+    <input type="password" id="githubTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="syncModalDisconnect">Disconnect</button>
+      <button class="btn btn-ghost" id="syncModalClose">Cancel</button>
+      <button class="btn btn-primary" id="syncModalSave">Save & Sync</button>
+    </div>
+    <p class="modal-status" id="syncModalStatus"></p>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -738,19 +784,157 @@ function saveSessions() {
   } catch(e) {
     showToast('Storage full — data may not be saved', 'error');
   }
+  if (getToken()) saveToGist();
 }
 
-function loadSessions() {
+async function loadSessions() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    allSessions = JSON.parse(raw).map(s => ({ ...s, date: s.date ? new Date(s.date) : null }));
-    allHorses = aggregateHorses(allSessions);
-    render();
+    if (raw) {
+      allSessions = JSON.parse(raw).map(s => ({ ...s, date: s.date ? new Date(s.date) : null }));
+      allHorses = aggregateHorses(allSessions);
+      render();
+    }
   } catch(e) {
     localStorage.removeItem(STORAGE_KEY);
   }
+  if (getToken()) await loadFromGist();
+  else setSyncStatus('default');
 }
+
+// ─── Cloud Sync (GitHub Gist) ─────────────────────────────────────────────────
+const GIST_TOKEN_KEY = 'ht_github_token';
+const GIST_ID_KEY    = 'ht_gist_id';
+const GIST_FILENAME  = 'horse-training-data.json';
+
+function getToken()  { return localStorage.getItem(GIST_TOKEN_KEY); }
+function getGistId() { return localStorage.getItem(GIST_ID_KEY); }
+
+function setSyncStatus(status) {
+  const btn = document.getElementById('syncBtn');
+  if (!btn) return;
+  btn.className = 'sync-status-btn';
+  switch (status) {
+    case 'syncing': btn.classList.add('syncing');    btn.textContent = '↻ Syncing…';   break;
+    case 'synced':  btn.classList.add('synced');     btn.textContent = '✓ Synced';     break;
+    case 'error':   btn.classList.add('sync-error'); btn.textContent = '✗ Sync error'; break;
+    default:        btn.textContent = getToken() ? '☁ Sync' : '☁ Set up sync';
+  }
+}
+
+async function gistFetch(method, path, body) {
+  const res = await fetch('https://api.github.com' + path, {
+    method,
+    headers: {
+      'Authorization': 'token ' + getToken(),
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'HTTP ' + res.status);
+  }
+  return res.json();
+}
+
+async function loadFromGist() {
+  setSyncStatus('syncing');
+  try {
+    let gistId = getGistId();
+    if (!gistId) {
+      const list = await gistFetch('GET', '/gists?per_page=100');
+      const found = list.find(g => g.files && g.files[GIST_FILENAME]);
+      if (found) { gistId = found.id; localStorage.setItem(GIST_ID_KEY, gistId); }
+    }
+    if (!gistId) { setSyncStatus('default'); return false; }
+    const gist = await gistFetch('GET', '/gists/' + gistId);
+    const content = gist.files[GIST_FILENAME]?.content;
+    if (!content) { setSyncStatus('default'); return false; }
+    const data = JSON.parse(content);
+    allSessions = data.map(s => ({ ...s, date: s.date ? new Date(s.date) : null }));
+    allHorses   = aggregateHorses(allSessions);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    setSyncStatus('synced');
+    render();
+    return true;
+  } catch(e) {
+    setSyncStatus('error');
+    showToast('Sync error: ' + e.message, 'error');
+    return false;
+  }
+}
+
+async function saveToGist() {
+  setSyncStatus('syncing');
+  try {
+    const data = allSessions.map(s => ({ ...s, date: s.date ? s.date.getTime() : null }));
+    const body = {
+      description: 'Horse Training Data',
+      public: false,
+      files: { [GIST_FILENAME]: { content: JSON.stringify(data) } },
+    };
+    let gistId = getGistId();
+    if (gistId) {
+      await gistFetch('PATCH', '/gists/' + gistId, body);
+    } else {
+      const g = await gistFetch('POST', '/gists', body);
+      localStorage.setItem(GIST_ID_KEY, g.id);
+    }
+    setSyncStatus('synced');
+  } catch(e) {
+    setSyncStatus('error');
+    showToast('Sync save failed: ' + e.message, 'error');
+  }
+}
+
+// Sync modal
+document.getElementById('syncBtn').addEventListener('click', () => {
+  document.getElementById('githubTokenInput').value = getToken() || '';
+  const gid = getGistId();
+  document.getElementById('syncModalStatus').textContent =
+    gid ? 'Connected · Gist ' + gid.slice(0, 8) + '…' : '';
+  document.getElementById('syncModal').classList.add('open');
+});
+
+document.getElementById('syncModalClose').addEventListener('click', () => {
+  document.getElementById('syncModal').classList.remove('open');
+});
+
+document.getElementById('syncModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('syncModal'))
+    document.getElementById('syncModal').classList.remove('open');
+});
+
+document.getElementById('syncModalDisconnect').addEventListener('click', () => {
+  localStorage.removeItem(GIST_TOKEN_KEY);
+  localStorage.removeItem(GIST_ID_KEY);
+  document.getElementById('syncModal').classList.remove('open');
+  setSyncStatus('default');
+  showToast('Cloud sync disconnected', '');
+});
+
+document.getElementById('syncModalSave').addEventListener('click', async () => {
+  const token = document.getElementById('githubTokenInput').value.trim();
+  const statusEl = document.getElementById('syncModalStatus');
+  if (!token) { statusEl.textContent = 'Please enter a token.'; return; }
+  statusEl.textContent = 'Verifying token…';
+  try {
+    const r = await fetch('https://api.github.com/user', {
+      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' },
+    });
+    if (!r.ok) throw new Error('Invalid token — make sure it has the "gist" scope');
+    localStorage.setItem(GIST_TOKEN_KEY, token);
+    document.getElementById('syncModal').classList.remove('open');
+    showToast('Token saved — syncing…', 'success');
+    const loaded = await loadFromGist();
+    if (!loaded && allSessions.length > 0) await saveToGist();
+    else if (!loaded) setSyncStatus('default');
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e.message;
+  }
+});
 
 // ─── File handling ────────────────────────────────────────────────────────────
 const fileInput = document.getElementById('fileInput');
