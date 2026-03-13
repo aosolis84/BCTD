@@ -141,6 +141,8 @@
 
   .quality { display: inline-flex; align-items: center; gap: 5px; }
   .quality-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .q-blue      { color: #2f81f7; }
+  .q-blue .quality-dot { background: #2f81f7; }
   .q-excellent { color: var(--green); }
   .q-excellent .quality-dot { background: var(--green); }
   .q-good      { color: #7bc47b; }
@@ -175,6 +177,7 @@
   .best-mark { color: var(--accent-hover); font-weight: 600; }
 
   /* Cell background quality colors */
+  td.bg-blue      { background: rgba(47,129,247,0.18); color: #2f81f7; font-weight: 600; }
   td.bg-excellent { background: rgba(61,190,138,0.18); color: #3dbe8a; font-weight: 600; }
   td.bg-good      { background: rgba(123,196,123,0.18); color: #7bc47b; font-weight: 600; }
   td.bg-fair      { background: rgba(232,184,75,0.18);  color: #e8b84b; font-weight: 600; }
@@ -563,17 +566,17 @@ function qualityClass(q) {
 // For coloring raw bpm — Fast Recovery thresholds
 function bpmClass(bpm) {
   if (bpm == null || isNaN(bpm)) return '';
-  if (bpm <= 80)  return 'q-excellent';
-  if (bpm <= 118) return 'q-good';
-  if (bpm <= 125) return 'q-fair';
-  if (bpm <= 140) return 'q-difficult';
+  if (bpm <= 105) return 'q-blue';
+  if (bpm <= 120) return 'q-good';
+  if (bpm <= 135) return 'q-fair';
+  if (bpm <= 145) return 'q-difficult';
   return 'q-poor';
 }
 
 // 15 Min Recovery thresholds
 function bpmClass15(bpm) {
   if (bpm == null || isNaN(bpm)) return '';
-  if (bpm <= 80)  return 'q-excellent';
+  if (bpm <= 80)  return 'q-blue';
   if (bpm <= 102) return 'q-good';
   if (bpm <= 115) return 'q-fair';
   return 'q-poor';
@@ -593,16 +596,16 @@ function qualityBg(q) {
 
 function bpmBg(bpm) {
   if (bpm == null || isNaN(bpm)) return 'bg-na';
-  if (bpm <= 80)  return 'bg-excellent';
-  if (bpm <= 118) return 'bg-good';
-  if (bpm <= 125) return 'bg-fair';
-  if (bpm <= 140) return 'bg-difficult';
+  if (bpm <= 105) return 'bg-blue';
+  if (bpm <= 120) return 'bg-good';
+  if (bpm <= 135) return 'bg-fair';
+  if (bpm <= 145) return 'bg-difficult';
   return 'bg-poor';
 }
 
 function bpmBg15(bpm) {
   if (bpm == null || isNaN(bpm)) return 'bg-na';
-  if (bpm <= 80)  return 'bg-excellent';
+  if (bpm <= 80)  return 'bg-blue';
   if (bpm <= 102) return 'bg-good';
   if (bpm <= 115) return 'bg-fair';
   return 'bg-poor';
