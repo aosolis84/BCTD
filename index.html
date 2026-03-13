@@ -60,9 +60,23 @@
     display: flex; align-items: center; gap: 8px;
     margin-bottom: 14px; flex-wrap: wrap;
   }
-  .toolbar-sep {
-    flex: 1;
+  .toolbar-sep { flex: 1; }
+
+  /* Export dropdown */
+  .dropdown { position: relative; display: inline-flex; }
+  .dropdown-menu {
+    display: none; position: absolute; top: calc(100% + 4px); right: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); min-width: 160px; z-index: 50;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden;
   }
+  .dropdown.open .dropdown-menu { display: block; }
+  .dropdown-item {
+    display: block; width: 100%; padding: 10px 16px; font-size: 13px;
+    color: var(--text); background: none; border: none; cursor: pointer;
+    text-align: left; transition: background 0.1s;
+  }
+  .dropdown-item:hover { background: #2a2f47; }
 
   /* Stats */
   .stats-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -280,7 +294,13 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search horse name…">
     </div>
-    <button class="btn btn-ghost" id="exportBtn">↓ Export</button>
+    <div class="dropdown" id="exportDropdown">
+      <button class="btn btn-ghost" id="exportBtn">↓ Export</button>
+      <div class="dropdown-menu">
+        <button class="dropdown-item" id="exportCurrentView">Current View</button>
+        <button class="dropdown-item" id="exportAllData">All Training Data</button>
+      </div>
+    </div>
   </div>
 
   <div class="stats-bar" id="statsBar" style="display:none"></div>
@@ -689,9 +709,23 @@ document.getElementById('manageBtn').addEventListener('click', () => {
   showToast('Manage — coming soon', '');
 });
 
-document.getElementById('exportBtn').addEventListener('click', () => {
+// Export dropdown
+const exportDropdown = document.getElementById('exportDropdown');
+document.getElementById('exportBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
   if (!allHorses.length) { showToast('No data to export', 'error'); return; }
+  exportDropdown.classList.toggle('open');
+});
+document.addEventListener('click', () => exportDropdown.classList.remove('open'));
+
+document.getElementById('exportCurrentView').addEventListener('click', () => {
+  exportDropdown.classList.remove('open');
   exportAllToExcel();
+});
+
+document.getElementById('exportAllData').addEventListener('click', () => {
+  exportDropdown.classList.remove('open');
+  exportAllSessionsToExcel();
 });
 
 // ─── Filter & Sort ────────────────────────────────────────────────────────────
@@ -738,6 +772,39 @@ function exportAllToExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Horses');
   XLSX.writeFile(wb, 'horse-training-summary.xlsx');
+}
+
+function exportAllSessionsToExcel() {
+  const sorted = [...allSessions].sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
+  const data = [
+    ['Date', 'Horse', 'Age', 'Sex', 'Training Type', 'Track Name', 'Track Surface',
+     'Working Distance', 'Avg Speed', 'Max Speed',
+     '1F', '2F', '3F', '4F', '5F', '6F', '7F',
+     'Max HR', 'Fast Recovery', 'Fast Recovery Quality', '15 Min Recovery', '15 Min Quality'],
+    ...sorted.map(s => [
+      s.date ? fmtDate(s.date) : '—',
+      s.name,
+      s.age !== null ? s.age : '—',
+      s.sex || '—',
+      s.trainingType || '—',
+      s.trackName    || '—',
+      s.trackSurface || '—',
+      s.workingDist  !== null ? s.workingDist  : '—',
+      s.avgSpeed     !== null ? s.avgSpeed     : '—',
+      s.maxSpeed     !== null ? s.maxSpeed     : '—',
+      fmtTime(s.best1F), fmtTime(s.best2F), fmtTime(s.best3F), fmtTime(s.best4F),
+      fmtTime(s.best5F), fmtTime(s.best6F), fmtTime(s.best7F),
+      s.maxHR        !== null ? s.maxHR        : '—',
+      s.fastRecovery !== null ? s.fastRecovery : '—',
+      s.fastRecQual  || '—',
+      s.rec15min     !== null ? s.rec15min     : '—',
+      s.rec15qual    || '—',
+    ])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'All Sessions');
+  XLSX.writeFile(wb, 'all-training-data.xlsx');
 }
 
 function exportHorseToExcel(horseName) {
