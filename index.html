@@ -708,6 +708,53 @@ function sortHorses(arr) {
   });
 }
 
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportAllToExcel() {
+  const rows = sortHorses(getFiltered());
+  const data = [
+    ['Horse', 'Sessions', 'Last Training', 'Age', 'Sex', 'Best 1F', 'Best 5F', 'Fast Recovery', '15 Min Recovery'],
+    ...rows.map(h => [
+      h.name,
+      h.sessions,
+      h.lastTraining ? fmtDate(h.lastTraining) : '—',
+      h.age !== null ? h.age : '—',
+      h.sex || '—',
+      fmtTime(h.best1F),
+      fmtTime(h.best5F),
+      h.fastRecovery !== null ? h.fastRecovery + ' bpm' + (h.fastRecQual && h.fastRecQual !== 'N/A' ? ' · ' + h.fastRecQual : '') : '—',
+      h.rec15min     !== null ? h.rec15min     + ' bpm' + (h.rec15qual  && h.rec15qual  !== 'N/A' ? ' · ' + h.rec15qual  : '') : '—',
+    ])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Horses');
+  XLSX.writeFile(wb, 'horse-training-summary.xlsx');
+}
+
+function exportHorseToExcel(horseName) {
+  const horse = allHorses.find(h => h.name === horseName);
+  if (!horse) return;
+  const sessions = [...horse.sessionsList].sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
+  const data = [
+    ['Date', 'Distance', 'Avg Speed', 'Max Speed', '1F', '2F', '3F', '4F', '5F', '6F', '7F', 'Max HR', 'Fast Recovery', '15 Min Recovery'],
+    ...sessions.map(s => [
+      s.date ? fmtDate(s.date) : '—',
+      s.workingDist !== null ? s.workingDist.toFixed(2) + ' f' : '—',
+      s.avgSpeed    !== null ? s.avgSpeed.toFixed(1) + ' mph'  : '—',
+      s.maxSpeed    !== null ? s.maxSpeed.toFixed(1) + ' mph'  : '—',
+      fmtTime(s.best1F), fmtTime(s.best2F), fmtTime(s.best3F), fmtTime(s.best4F),
+      fmtTime(s.best5F), fmtTime(s.best6F), fmtTime(s.best7F),
+      s.maxHR       !== null ? s.maxHR + ' bpm' : '—',
+      s.fastRecovery !== null ? s.fastRecovery + ' bpm' + (s.fastRecQual && s.fastRecQual !== 'N/A' ? ' · ' + s.fastRecQual : '') : '—',
+      s.rec15min     !== null ? s.rec15min     + ' bpm' + (s.rec15qual  && s.rec15qual  !== 'N/A' ? ' · ' + s.rec15qual  : '') : '—',
+    ])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, horse.name.substring(0, 31));
+  XLSX.writeFile(wb, horse.name + '-sessions.xlsx');
+}
+
 // ─── Render ───────────────────────────────────────────────────────────────────
 function render() {
   const hasData = allHorses.length > 0;
@@ -729,6 +776,7 @@ function renderStats(shown) {
     <div class="stat-chip"><strong>${allHorses.length}</strong> horses</div>
     <div class="stat-chip">Showing <strong>${shown}</strong></div>
     <div class="stat-chip"><strong>${allSessions.length}</strong> total sessions</div>
+    <button class="btn btn-ghost" onclick="exportAllToExcel()" style="margin-left:auto">↓ Export Excel</button>
   `;
 }
 
@@ -877,6 +925,9 @@ function renderDetailInner(horse) {
   }).join('');
 
   return `<div class="detail-inner">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+      <button class="btn btn-ghost" onclick="exportHorseToExcel('${esc(horse.name)}')">↓ Export Excel</button>
+    </div>
     <table>
       <thead><tr>
         <th>Date</th>
