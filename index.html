@@ -41,7 +41,6 @@
   }
   header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
   .subtitle { color: var(--text-dim); font-size: 13px; }
-  .horse-icon { font-size: 28px; line-height: 1; }
 
   .main { padding: 24px; max-width: 1600px; margin: 0 auto; }
 
@@ -260,7 +259,6 @@
 
 <div id="lockScreen">
   <div class="lock-box">
-    <div class="lock-icon">🐎</div>
     <h2>Horse Training Data</h2>
     <p>Enter passcode to continue</p>
     <input type="password" id="passcodeInput" placeholder="Passcode" autocomplete="current-password">
@@ -270,7 +268,6 @@
 </div>
 
 <header>
-  <span class="horse-icon">🐎</span>
   <div>
     <h1>Horse Training Data</h1>
     <div class="subtitle">Arioneo / Equimetre — XLSX &amp; CSV</div>
@@ -291,10 +288,6 @@
     <button class="btn btn-ghost" id="clearBtn" style="display:none">✕ Clear All</button>
   </div>
 
-  <div id="infoBanner" class="info-banner" style="display:none">
-    ℹ️ Owner and country are not exported by Arioneo — those columns show "—". All other columns are pulled directly from your file.
-  </div>
-
   <div class="stats-bar" id="statsBar" style="display:none"></div>
 
   <div class="filters" id="filtersRow" style="display:none">
@@ -302,10 +295,6 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search horse name…">
     </div>
-    <span class="filter-label">Owner:</span>
-    <select id="ownerFilter"><option value="">All</option></select>
-    <span class="filter-label">Country:</span>
-    <select id="countryFilter"><option value="">All</option></select>
     <span class="filter-label">Age:</span>
     <select id="ageFilter"><option value="">All</option></select>
   </div>
@@ -357,6 +346,9 @@ function logout() {
   location.reload();
 }
 
+// Load any previously saved sessions once page is ready
+document.addEventListener('DOMContentLoaded', loadSessions);
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let allSessions  = [];   // raw session rows
 let allHorses    = [];   // aggregated per horse
@@ -368,8 +360,6 @@ let expandedSet  = new Set(); // horse names currently expanded
 const COLS = [
   { key: 'name',         label: 'Horse',           type: 'string' },
   { key: 'sessions',     label: 'Sessions',        type: 'number' },
-  { key: 'owner',        label: 'Owner',           type: 'string' },
-  { key: 'country',      label: 'Country',         type: 'string' },
   { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
   { key: 'age',          label: 'Age',             type: 'number' },
   { key: 'best1F',       label: 'Best 1F',         type: 'time'   },
@@ -624,6 +614,30 @@ function aggregateHorses(sessions) {
   return [...map.values()];
 }
 
+// ─── Persistence ─────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'ht_sessions_v1';
+
+function saveSessions() {
+  try {
+    const data = allSessions.map(s => ({ ...s, date: s.date ? s.date.getTime() : null }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) {
+    showToast('Storage full — data may not be saved', 'error');
+  }
+}
+
+function loadSessions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    allSessions = JSON.parse(raw).map(s => ({ ...s, date: s.date ? new Date(s.date) : null }));
+    allHorses = aggregateHorses(allSessions);
+    render();
+  } catch(e) {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 // ─── File handling ────────────────────────────────────────────────────────────
 const fileInput  = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
@@ -679,28 +693,26 @@ function handleFiles(files) {
 
 function finalize(added, fileCount) {
   allHorses = aggregateHorses(allSessions);
+  saveSessions();
   showToast(`Loaded ${added} new sessions · ${allHorses.length} horses`, 'success');
   render();
 }
 
 document.getElementById('clearBtn').addEventListener('click', () => {
   allSessions = []; allHorses = [];
+  localStorage.removeItem(STORAGE_KEY);
   document.getElementById('searchInput').value = '';
-  ['ownerFilter','countryFilter','ageFilter'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ageFilter').value = '';
   render();
 });
 
 // ─── Filter & Sort ────────────────────────────────────────────────────────────
 function getFiltered() {
   const q   = document.getElementById('searchInput').value.toLowerCase().trim();
-  const own = document.getElementById('ownerFilter').value;
-  const cnt = document.getElementById('countryFilter').value;
   const age = document.getElementById('ageFilter').value;
 
   return allHorses.filter(h => {
     if (q   && !h.name.toLowerCase().includes(q)) return false;
-    if (own && h.owner   !== own)        return false;
-    if (cnt && h.country !== cnt)        return false;
     if (age && String(h.age ?? '') !== age) return false;
     return true;
   });
@@ -733,7 +745,6 @@ function render() {
 
   document.getElementById('statsBar').style.display    = hasData ? 'flex'  : 'none';
   document.getElementById('filtersRow').style.display  = hasData ? 'flex'  : 'none';
-  document.getElementById('infoBanner').style.display  = hasData ? 'flex'  : 'none';
   document.getElementById('clearBtn').style.display    = hasData ? 'inline-flex' : 'none';
 
   if (hasData) renderStats(filtered.length);
@@ -749,13 +760,8 @@ function renderStats(shown) {
 }
 
 function populateDropdowns() {
-  const owners    = [...new Set(allHorses.map(h => h.owner))].filter(v=>v&&v!=='—').sort();
-  const countries = [...new Set(allHorses.map(h => h.country))].filter(v=>v&&v!=='—').sort();
-  const ages      = [...new Set(allHorses.map(h => h.age !== null ? String(h.age) : ''))].filter(Boolean).sort((a,b)=>+a-+b);
-
-  fillSelect('ownerFilter',   owners);
-  fillSelect('countryFilter', countries);
-  fillSelect('ageFilter',     ages);
+  const ages = [...new Set(allHorses.map(h => h.age !== null ? String(h.age) : ''))].filter(Boolean).sort((a,b)=>+a-+b);
+  fillSelect('ageFilter', ages);
 }
 
 function fillSelect(id, opts) {
@@ -797,8 +803,6 @@ function renderTable(rows) {
     const mainRow = `<tr class="horse-row${isOpen?' expanded':''}" data-horse="${esc(h.name)}">
       <td class="horse-name"><span class="chevron">▶</span>${esc(h.name)}</td>
       <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
-      <td class="dim">${esc(h.owner)}</td>
-      <td class="dim">${esc(h.country)}</td>
       <td class="dim">${fmtDate(h.lastTraining)}</td>
       <td>${h.age !== null ? h.age + ' yr' : '—'}</td>
       <td class="time-val">${fmtTime(h.best1F)}</td>
@@ -919,7 +923,7 @@ function renderDetailInner(horse) {
   </div>`;
 }
 
-['searchInput','ownerFilter','countryFilter','ageFilter'].forEach(id => {
+['searchInput','ageFilter'].forEach(id => {
   document.getElementById(id).addEventListener('input', render);
   document.getElementById(id).addEventListener('change', render);
 });
