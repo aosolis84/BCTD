@@ -55,6 +55,15 @@
   .btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
   .btn-ghost:hover { color: var(--text); border-color: #4a4e6a; }
 
+  /* Toolbar */
+  .toolbar {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .toolbar-sep {
+    flex: 1;
+  }
+
   /* Stats */
   .stats-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
   .stat-chip {
@@ -261,22 +270,20 @@
 
 <div class="main">
 
-  <div style="display:flex; gap:8px; margin-bottom:20px;">
+  <div class="toolbar">
     <input type="file" id="fileInput" accept=".xlsx,.csv,.xls" multiple style="display:none">
     <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Choose Files</button>
-    <button class="btn btn-ghost" id="clearBtn" style="display:none">✕ Clear All</button>
-  </div>
-
-  <div class="stats-bar" id="statsBar" style="display:none"></div>
-
-  <div class="filters" id="filtersRow" style="display:none">
+    <button class="btn btn-ghost" id="manageBtn">Manage</button>
+    <button class="btn btn-ghost" id="clearBtn">✕ Clear</button>
+    <div class="toolbar-sep"></div>
     <div class="search-wrap">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search horse name…">
     </div>
-    <span class="filter-label">Age:</span>
-    <select id="ageFilter"><option value="">All</option></select>
+    <button class="btn btn-ghost" id="exportBtn">↓ Export</button>
   </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none"></div>
 
   <div id="tableContainer">
     <div class="empty-state">
@@ -675,20 +682,22 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   allSessions = []; allHorses = [];
   localStorage.removeItem(STORAGE_KEY);
   document.getElementById('searchInput').value = '';
-  document.getElementById('ageFilter').value = '';
   render();
+});
+
+document.getElementById('manageBtn').addEventListener('click', () => {
+  showToast('Manage — coming soon', '');
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!allHorses.length) { showToast('No data to export', 'error'); return; }
+  exportAllToExcel();
 });
 
 // ─── Filter & Sort ────────────────────────────────────────────────────────────
 function getFiltered() {
-  const q   = document.getElementById('searchInput').value.toLowerCase().trim();
-  const age = document.getElementById('ageFilter').value;
-
-  return allHorses.filter(h => {
-    if (q   && !h.name.toLowerCase().includes(q)) return false;
-    if (age && String(h.age ?? '') !== age) return false;
-    return true;
-  });
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  return allHorses.filter(h => !q || h.name.toLowerCase().includes(q));
 }
 
 function sortHorses(arr) {
@@ -763,9 +772,7 @@ function render() {
   const filtered = getFiltered();
   const sorted   = sortHorses(filtered);
 
-  document.getElementById('statsBar').style.display    = hasData ? 'flex'  : 'none';
-  document.getElementById('filtersRow').style.display  = hasData ? 'flex'  : 'none';
-  document.getElementById('clearBtn').style.display    = hasData ? 'inline-flex' : 'none';
+  document.getElementById('statsBar').style.display = hasData ? 'flex' : 'none';
 
   if (hasData) renderStats(filtered.length);
   renderTable(sorted);
@@ -776,14 +783,10 @@ function renderStats(shown) {
     <div class="stat-chip"><strong>${allHorses.length}</strong> horses</div>
     <div class="stat-chip">Showing <strong>${shown}</strong></div>
     <div class="stat-chip"><strong>${allSessions.length}</strong> total sessions</div>
-    <button class="btn btn-ghost" onclick="exportAllToExcel()" style="margin-left:auto">↓ Export Excel</button>
   `;
 }
 
-function populateDropdowns() {
-  const ages = [...new Set(allHorses.map(h => h.age !== null ? String(h.age) : ''))].filter(Boolean).sort((a,b)=>+a-+b);
-  fillSelect('ageFilter', ages);
-}
+function populateDropdowns() {}
 
 function fillSelect(id, opts) {
   const sel = document.getElementById(id);
@@ -950,10 +953,7 @@ function renderDetailInner(horse) {
   </div>`;
 }
 
-['searchInput','ageFilter'].forEach(id => {
-  document.getElementById(id).addEventListener('input', render);
-  document.getElementById(id).addEventListener('change', render);
-});
+document.getElementById('searchInput').addEventListener('input', render);
 
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
