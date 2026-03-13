@@ -1025,14 +1025,14 @@ function renderDetailPage(horse) {
   const best = {};
   const timeCols = ['best1F','best2F','best3F','best4F','best5F','best6F','best7F'];
   timeCols.forEach(k => {
-    const vals = sessions.map(s => s[k]).filter(v => v !== null);
+    const vals = sessions.map(s => s[k]).filter(v => v != null);
     best[k] = vals.length ? Math.min(...vals) : null;
   });
-  const speedVals = sessions.map(s => s.maxSpeed).filter(v => v !== null);
+  const speedVals = sessions.map(s => s.maxSpeed).filter(v => v != null);
   best.maxSpeed = speedVals.length ? Math.max(...speedVals) : null;
-  const frVals = sessions.map(s => s.fastRecovery).filter(v => v !== null);
+  const frVals = sessions.map(s => s.fastRecovery).filter(v => v != null);
   best.fastRecovery = frVals.length ? Math.min(...frVals) : null;
-  const r15Vals = sessions.map(s => s.rec15min).filter(v => v !== null);
+  const r15Vals = sessions.map(s => s.rec15min).filter(v => v != null);
   best.rec15min = r15Vals.length ? Math.min(...r15Vals) : null;
 
   const headers = cols.map(c => `<th>${c.label}</th>`).join('');
@@ -1058,9 +1058,9 @@ function renderDetailCell(s, key, best) {
     case 'trainingType':  return `<td class="dim">${esc(s.trainingType || '—')}</td>`;
     case 'trackName':     return `<td class="dim">${esc(s.trackName || '—')}</td>`;
     case 'trackSurface':  return `<td class="dim">${esc(s.trackSurface || '—')}</td>`;
-    case 'workingDist':   return `<td>${s.workingDist !== null ? s.workingDist.toFixed(2) : '—'}</td>`;
-    case 'avgSpeed':      return `<td>${s.avgSpeed !== null ? s.avgSpeed.toFixed(1) : '—'}</td>`;
-    case 'maxSpeed':      return `<td class="${isBest(s.maxSpeed, best.maxSpeed) ? 'best-mark' : ''}">${s.maxSpeed !== null ? s.maxSpeed.toFixed(1) : '—'}</td>`;
+    case 'workingDist':   return `<td>${s.workingDist != null ? s.workingDist.toFixed(2) : '—'}</td>`;
+    case 'avgSpeed':      return `<td>${s.avgSpeed != null ? s.avgSpeed.toFixed(1) : '—'}</td>`;
+    case 'maxSpeed':      return `<td class="${isBest(s.maxSpeed, best.maxSpeed) ? 'best-mark' : ''}">${s.maxSpeed != null ? s.maxSpeed.toFixed(1) : '—'}</td>`;
     case 'best1F': case 'best2F': case 'best3F': case 'best4F':
     case 'best5F': case 'best6F': case 'best7F': {
       const v = s[key];
@@ -1073,29 +1073,29 @@ function renderDetailCell(s, key, best) {
       return `<td><span class="quality ${cls}${mk}"><span class="quality-dot"></span>${fmt(s.fastRecovery)}</span></td>`;
     }
     case 'fastRecQual':   return `<td class="${qualityClass(s.fastRecQual)}">${esc(s.fastRecQual || '—')}</td>`;
-    case 'fastRecPct':    return `<td>${s.fastRecPct !== null ? s.fastRecPct.toFixed(1) + '%' : '—'}</td>`;
+    case 'fastRecPct':    return `<td>${s.fastRecPct != null ? s.fastRecPct.toFixed(1) + '%' : '—'}</td>`;
     case 'rec15min': {
       const cls = s.rec15qual ? qualityClass(s.rec15qual) : bpmClass(s.rec15min);
       const mk = isBest(s.rec15min, best.rec15min) ? ' best-mark' : '';
       return `<td><span class="quality ${cls}${mk}"><span class="quality-dot"></span>${fmt(s.rec15min)}</span></td>`;
     }
     case 'rec15qual':     return `<td class="${qualityClass(s.rec15qual)}">${esc(s.rec15qual || '—')}</td>`;
-    case 'rec15pct':      return `<td>${s.rec15pct !== null ? s.rec15pct.toFixed(1) + '%' : '—'}</td>`;
-    case 'maxSL':         return `<td>${s.maxSL !== null ? s.maxSL.toFixed(2) : '—'}</td>`;
-    case 'slGallop':      return `<td>${s.slGallop !== null ? s.slGallop.toFixed(2) : '—'}</td>`;
-    case 'sfGallop':      return `<td>${s.sfGallop !== null ? s.sfGallop.toFixed(2) : '—'}</td>`;
-    case 'slWork':        return `<td>${s.slWork !== null ? s.slWork.toFixed(2) : '—'}</td>`;
-    case 'sfWork':        return `<td>${s.sfWork !== null ? s.sfWork.toFixed(2) : '—'}</td>`;
-    case 'hr2min':        return `<td>${fmt(s.hr2min)}</td>`;
-    case 'hr5min':        return `<td>${fmt(s.hr5min)}</td>`;
-    case 'symmetry':      return `<td>${s.symmetry !== null ? s.symmetry.toFixed(1) : '—'}</td>`;
-    case 'regularity':    return `<td>${s.regularity !== null ? s.regularity.toFixed(1) : '—'}</td>`;
+    case 'rec15pct':      return `<td>${s.rec15pct != null ? s.rec15pct.toFixed(1) + '%' : '—'}</td>`;
+    case 'maxSL':         return `<td>${s.maxSL != null ? s.maxSL.toFixed(2) : '—'}</td>`;
+    case 'slGallop':      return `<td>${s.slGallop != null ? s.slGallop.toFixed(2) : '—'}</td>`;
+    case 'sfGallop':      return `<td>${s.sfGallop != null ? s.sfGallop.toFixed(2) : '—'}</td>`;
+    case 'slWork':        return `<td>${s.slWork != null ? s.slWork.toFixed(2) : '—'}</td>`;
+    case 'sfWork':        return `<td>${s.sfWork != null ? s.sfWork.toFixed(2) : '—'}</td>`;
+    case 'hr2min':        return `<td>${s.hr2min != null ? s.hr2min : '—'}</td>`;
+    case 'hr5min':        return `<td>${s.hr5min != null ? s.hr5min : '—'}</td>`;
+    case 'symmetry':      return `<td>${s.symmetry != null ? s.symmetry.toFixed(1) : '—'}</td>`;
+    case 'regularity':    return `<td>${s.regularity != null ? s.regularity.toFixed(1) : '—'}</td>`;
     case 'workingDuration': return `<td class="dim">${esc(s.workingDuration || '—')}</td>`;
     case 'timeTo120':     return `<td>${esc(s.timeTo120 || '—')}</td>`;
     case 'durationZone5': return `<td>${esc(s.durationZone5 || '—')}</td>`;
-    case 'temperature':   return `<td>${s.temperature !== null ? s.temperature.toFixed(1) : '—'}</td>`;
-    case 'trottingHR':    return `<td>${fmt(s.trottingHR)}</td>`;
-    case 'walkingHR':     return `<td>${fmt(s.walkingHR)}</td>`;
+    case 'temperature':   return `<td>${s.temperature != null ? s.temperature.toFixed(1) : '—'}</td>`;
+    case 'trottingHR':    return `<td>${s.trottingHR != null ? s.trottingHR : '—'}</td>`;
+    case 'walkingHR':     return `<td>${s.walkingHR != null ? s.walkingHR : '—'}</td>`;
     default:              return `<td>—</td>`;
   }
 }
