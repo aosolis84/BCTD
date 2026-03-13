@@ -560,13 +560,22 @@ function qualityClass(q) {
   }
 }
 
-// For coloring raw bpm (fast recovery: lower = better; 15min: lower = better)
+// For coloring raw bpm — Fast Recovery thresholds
 function bpmClass(bpm) {
-  if (bpm === null || isNaN(bpm)) return '';
+  if (bpm == null || isNaN(bpm)) return '';
   if (bpm <= 80)  return 'q-excellent';
-  if (bpm <= 100) return 'q-good';
-  if (bpm <= 120) return 'q-fair';
-  if (bpm <= 150) return 'q-difficult';
+  if (bpm <= 118) return 'q-good';
+  if (bpm <= 125) return 'q-fair';
+  if (bpm <= 140) return 'q-difficult';
+  return 'q-poor';
+}
+
+// 15 Min Recovery thresholds
+function bpmClass15(bpm) {
+  if (bpm == null || isNaN(bpm)) return '';
+  if (bpm <= 80)  return 'q-excellent';
+  if (bpm <= 102) return 'q-good';
+  if (bpm <= 115) return 'q-fair';
   return 'q-poor';
 }
 
@@ -987,8 +996,8 @@ function renderTable(rows) {
   }).join('');
 
   const bodyRows = rows.map(h => {
-    const frClass  = h.fastRecQual ? qualityClass(h.fastRecQual) : bpmClass(h.fastRecovery);
-    const r15Class = h.rec15qual   ? qualityClass(h.rec15qual)   : bpmClass(h.rec15min);
+    const frClass  = bpmClass(h.fastRecovery);
+    const r15Class = bpmClass15(h.rec15min);
 
     const frLabel = h.fastRecovery !== null
       ? `<span class="quality ${frClass}"><span class="quality-dot"></span>${h.fastRecovery} bpm${h.fastRecQual && h.fastRecQual!=='N/A' ? ' · '+h.fastRecQual : ''}</span>`
@@ -1105,14 +1114,14 @@ function renderDetailCell(s, key, best) {
     }
     case 'maxHR':         return `<td class="dim">${fmt(s.maxHR)}</td>`;
     case 'fastRecovery': {
-      const bg = s.fastRecQual ? qualityBg(s.fastRecQual) : bpmBg(s.fastRecovery);
+      const bg = bpmBg(s.fastRecovery);
       const mk = isBest(s.fastRecovery, best.fastRecovery) ? ' best-mark' : '';
       return `<td class="${bg}${mk}">${s.fastRecovery != null ? s.fastRecovery : '—'}</td>`;
     }
     case 'fastRecQual':   return `<td class="${qualityBg(s.fastRecQual)}">${esc(s.fastRecQual || '—')}</td>`;
     case 'fastRecPct':    return `<td>${s.fastRecPct != null ? s.fastRecPct.toFixed(1) + '%' : '—'}</td>`;
     case 'rec15min': {
-      const bg = s.rec15qual ? qualityBg(s.rec15qual) : bpmBg15(s.rec15min);
+      const bg = bpmBg15(s.rec15min);
       const mk = isBest(s.rec15min, best.rec15min) ? ' best-mark' : '';
       return `<td class="${bg}${mk}">${s.rec15min != null ? s.rec15min : '—'}</td>`;
     }
