@@ -412,10 +412,10 @@ const COLS = [
   { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
   { key: 'age',          label: 'Age',             type: 'number' },
   { key: 'sex',          label: 'Sex',             type: 'string' },
-  { key: 'best1F',       label: 'Best 1F',         type: 'time'   },
-  { key: 'best5F',       label: 'Best 5F',         type: 'time'   },
-  { key: 'fastRecovery', label: 'Fast Recovery',   type: 'number' },
-  { key: 'rec15min',     label: '15 Min Recovery', type: 'number' },
+  { key: 'last1F',       label: 'Last 1F',         type: 'time'   },
+  { key: 'last5F',       label: 'Last 5F',         type: 'time'   },
+  { key: 'lastFastRec',  label: 'Fast Recovery',   type: 'number' },
+  { key: 'lastRec15',    label: '15 Min Recovery', type: 'number' },
 ];
 
 // ─── Arioneo column name mapping (exact lowercase match) ─────────────────────
@@ -680,58 +680,42 @@ function aggregateHorses(sessions) {
   for (const s of sessions) {
     if (!map.has(s.name)) {
       map.set(s.name, {
-        name:         s.name,
-        owner:        s.owner,
-        country:      s.country,
-        lastTraining: null,
+        name:           s.name,
+        owner:          s.owner,
+        country:        s.country,
+        lastTraining:   null,
         lastTrainingTs: 0,
-        age:          s.age,
-        sex:          s.sex,
-        best1F:       null,
-        best5F:       null,
-        fastRecovery: null,
-        fastRecQual:  null,
-        rec15min:     null,
-        rec15qual:    null,
-        sessions:     0,
-        sessionsList: [],
+        age:            s.age,
+        sex:            s.sex,
+        last1F:         null,
+        last5F:         null,
+        lastFastRec:    null,
+        lastFastRecQual:null,
+        lastRec15:      null,
+        lastRec15qual:  null,
+        sessions:       0,
+        sessionsList:   [],
       });
     }
     const h = map.get(s.name);
     h.sessions++;
     h.sessionsList.push(s);
 
-    // Last training date
+    // Last training date — also capture that session's stats
     if (s.date && s.date.getTime() > h.lastTrainingTs) {
-      h.lastTrainingTs = s.date.getTime();
-      h.lastTraining   = s.date;
+      h.lastTrainingTs  = s.date.getTime();
+      h.lastTraining    = s.date;
+      h.last1F          = s.best1F;
+      h.last5F          = s.best5F;
+      h.lastFastRec     = s.fastRecovery;
+      h.lastFastRecQual = s.fastRecQual;
+      h.lastRec15       = s.rec15min;
+      h.lastRec15qual   = s.rec15qual;
     }
 
     // Age / Sex (use latest)
     if (s.age !== null) h.age = s.age;
     if (s.sex && s.sex !== '—') h.sex = s.sex;
-
-    // Best 1F: minimum time
-    if (s.best1F !== null && (h.best1F === null || s.best1F < h.best1F)) {
-      h.best1F = s.best1F;
-    }
-
-    // Best 5F: minimum time
-    if (s.best5F !== null && (h.best5F === null || s.best5F < h.best5F)) {
-      h.best5F = s.best5F;
-    }
-
-    // Best fast recovery: lowest bpm (heart most recovered)
-    if (s.fastRecovery !== null && (h.fastRecovery === null || s.fastRecovery < h.fastRecovery)) {
-      h.fastRecovery = s.fastRecovery;
-      h.fastRecQual  = s.fastRecQual;
-    }
-
-    // Best 15min recovery: lowest bpm
-    if (s.rec15min !== null && (h.rec15min === null || s.rec15min < h.rec15min)) {
-      h.rec15min  = s.rec15min;
-      h.rec15qual = s.rec15qual;
-    }
 
     // Owner/country: first non-— value wins
     if (h.owner === '—' && s.owner !== '—') h.owner = s.owner;
@@ -870,17 +854,17 @@ function sortHorses(arr) {
 function exportAllToExcel() {
   const rows = sortHorses(getFiltered());
   const data = [
-    ['Horse', 'Sessions', 'Last Training', 'Age', 'Sex', 'Best 1F', 'Best 5F', 'Fast Recovery', '15 Min Recovery'],
+    ['Horse', 'Sessions', 'Last Training', 'Age', 'Sex', 'Last 1F', 'Last 5F', 'Fast Recovery', '15 Min Recovery'],
     ...rows.map(h => [
       h.name,
       h.sessions,
       h.lastTraining ? fmtDate(h.lastTraining) : '—',
       h.age !== null ? h.age : '—',
       h.sex || '—',
-      fmtTime(h.best1F),
-      fmtTime(h.best5F),
-      h.fastRecovery !== null ? h.fastRecovery + ' bpm' + (h.fastRecQual && h.fastRecQual !== 'N/A' ? ' · ' + h.fastRecQual : '') : '—',
-      h.rec15min     !== null ? h.rec15min     + ' bpm' + (h.rec15qual  && h.rec15qual  !== 'N/A' ? ' · ' + h.rec15qual  : '') : '—',
+      fmtTime(h.last1F),
+      fmtTime(h.last5F),
+      h.lastFastRec !== null ? h.lastFastRec + ' bpm' + (h.lastFastRecQual && h.lastFastRecQual !== 'N/A' ? ' · ' + h.lastFastRecQual : '') : '—',
+      h.lastRec15   !== null ? h.lastRec15   + ' bpm' + (h.lastRec15qual  && h.lastRec15qual  !== 'N/A' ? ' · ' + h.lastRec15qual  : '') : '—',
     ])
   ];
   const ws = XLSX.utils.aoa_to_sheet(data);
@@ -996,15 +980,15 @@ function renderTable(rows) {
   }).join('');
 
   const bodyRows = rows.map(h => {
-    const frClass  = bpmClass(h.fastRecovery);
-    const r15Class = bpmClass15(h.rec15min);
+    const frClass  = bpmClass(h.lastFastRec);
+    const r15Class = bpmClass15(h.lastRec15);
 
-    const frLabel = h.fastRecovery !== null
-      ? `<span class="quality ${frClass}"><span class="quality-dot"></span>${h.fastRecovery} bpm${h.fastRecQual && h.fastRecQual!=='N/A' ? ' · '+h.fastRecQual : ''}</span>`
+    const frLabel = h.lastFastRec !== null
+      ? `<span class="quality ${frClass}"><span class="quality-dot"></span>${h.lastFastRec} bpm${h.lastFastRecQual && h.lastFastRecQual!=='N/A' ? ' · '+h.lastFastRecQual : ''}</span>`
       : '—';
 
-    const r15Label = h.rec15min !== null
-      ? `<span class="quality ${r15Class}"><span class="quality-dot"></span>${h.rec15min} bpm${h.rec15qual && h.rec15qual!=='N/A' ? ' · '+h.rec15qual : ''}</span>`
+    const r15Label = h.lastRec15 !== null
+      ? `<span class="quality ${r15Class}"><span class="quality-dot"></span>${h.lastRec15} bpm${h.lastRec15qual && h.lastRec15qual!=='N/A' ? ' · '+h.lastRec15qual : ''}</span>`
       : '—';
 
     return `<tr class="horse-row" data-horse="${esc(h.name)}">
@@ -1013,8 +997,8 @@ function renderTable(rows) {
       <td class="dim">${fmtDate(h.lastTraining)}</td>
       <td>${h.age !== null ? h.age + ' yr' : '—'}</td>
       <td class="dim">${esc(h.sex || '—')}</td>
-      <td class="time-val">${fmtTime(h.best1F)}</td>
-      <td class="time-val">${fmtTime(h.best5F)}</td>
+      <td class="time-val">${fmtTime(h.last1F)}</td>
+      <td class="time-val">${fmtTime(h.last5F)}</td>
       <td>${frLabel}</td>
       <td>${r15Label}</td>
     </tr>`;
