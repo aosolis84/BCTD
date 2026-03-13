@@ -174,6 +174,14 @@
   .cols-panel input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
   .best-mark { color: var(--accent-hover); font-weight: 600; }
 
+  /* Cell background quality colors */
+  td.bg-excellent { background: rgba(61,190,138,0.18); color: #3dbe8a; font-weight: 600; }
+  td.bg-good      { background: rgba(123,196,123,0.18); color: #7bc47b; font-weight: 600; }
+  td.bg-fair      { background: rgba(232,184,75,0.18);  color: #e8b84b; font-weight: 600; }
+  td.bg-difficult { background: rgba(224,123,61,0.18);  color: #e07b3d; font-weight: 600; }
+  td.bg-poor      { background: rgba(224,92,92,0.18);   color: #e05c5c; font-weight: 600; }
+  td.bg-na        { color: var(--text-dim); }
+
   /* Empty state */
   .empty-state { text-align: center; padding: 60px 24px; color: var(--text-dim); }
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
@@ -560,6 +568,35 @@ function bpmClass(bpm) {
   if (bpm <= 120) return 'q-fair';
   if (bpm <= 150) return 'q-difficult';
   return 'q-poor';
+}
+
+function qualityBg(q) {
+  if (!q || q === 'N/A' || q === '—') return 'bg-na';
+  switch (String(q).toLowerCase().trim()) {
+    case 'excellent':  return 'bg-excellent';
+    case 'good':       return 'bg-good';
+    case 'fair':       return 'bg-fair';
+    case 'difficult':  return 'bg-difficult';
+    case 'poor':       return 'bg-poor';
+    default:           return 'bg-na';
+  }
+}
+
+function bpmBg(bpm) {
+  if (bpm == null || isNaN(bpm)) return 'bg-na';
+  if (bpm <= 80)  return 'bg-excellent';
+  if (bpm <= 118) return 'bg-good';
+  if (bpm <= 125) return 'bg-fair';
+  if (bpm <= 140) return 'bg-difficult';
+  return 'bg-poor';
+}
+
+function bpmBg15(bpm) {
+  if (bpm == null || isNaN(bpm)) return 'bg-na';
+  if (bpm <= 80)  return 'bg-excellent';
+  if (bpm <= 102) return 'bg-good';
+  if (bpm <= 115) return 'bg-fair';
+  return 'bg-poor';
 }
 
 // ─── Parse worksheet rows into session objects ────────────────────────────────
@@ -1068,18 +1105,18 @@ function renderDetailCell(s, key, best) {
     }
     case 'maxHR':         return `<td class="dim">${fmt(s.maxHR)}</td>`;
     case 'fastRecovery': {
-      const cls = s.fastRecQual ? qualityClass(s.fastRecQual) : bpmClass(s.fastRecovery);
+      const bg = s.fastRecQual ? qualityBg(s.fastRecQual) : bpmBg(s.fastRecovery);
       const mk = isBest(s.fastRecovery, best.fastRecovery) ? ' best-mark' : '';
-      return `<td><span class="quality ${cls}${mk}"><span class="quality-dot"></span>${fmt(s.fastRecovery)}</span></td>`;
+      return `<td class="${bg}${mk}">${s.fastRecovery != null ? s.fastRecovery : '—'}</td>`;
     }
-    case 'fastRecQual':   return `<td class="${qualityClass(s.fastRecQual)}">${esc(s.fastRecQual || '—')}</td>`;
+    case 'fastRecQual':   return `<td class="${qualityBg(s.fastRecQual)}">${esc(s.fastRecQual || '—')}</td>`;
     case 'fastRecPct':    return `<td>${s.fastRecPct != null ? s.fastRecPct.toFixed(1) + '%' : '—'}</td>`;
     case 'rec15min': {
-      const cls = s.rec15qual ? qualityClass(s.rec15qual) : bpmClass(s.rec15min);
+      const bg = s.rec15qual ? qualityBg(s.rec15qual) : bpmBg15(s.rec15min);
       const mk = isBest(s.rec15min, best.rec15min) ? ' best-mark' : '';
-      return `<td><span class="quality ${cls}${mk}"><span class="quality-dot"></span>${fmt(s.rec15min)}</span></td>`;
+      return `<td class="${bg}${mk}">${s.rec15min != null ? s.rec15min : '—'}</td>`;
     }
-    case 'rec15qual':     return `<td class="${qualityClass(s.rec15qual)}">${esc(s.rec15qual || '—')}</td>`;
+    case 'rec15qual':     return `<td class="${qualityBg(s.rec15qual)}">${esc(s.rec15qual || '—')}</td>`;
     case 'rec15pct':      return `<td>${s.rec15pct != null ? s.rec15pct.toFixed(1) + '%' : '—'}</td>`;
     case 'maxSL':         return `<td>${s.maxSL != null ? s.maxSL.toFixed(2) : '—'}</td>`;
     case 'slGallop':      return `<td>${s.slGallop != null ? s.slGallop.toFixed(2) : '—'}</td>`;
