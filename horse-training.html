@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horse Training Data</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222537;
+    --border: #2e3148;
+    --accent: #5b6af0;
+    --accent-hover: #7b87f5;
+    --text: #e2e4f0;
+    --text-dim: #8b90a8;
+    --green: #3dbe8a;
+    --red: #e05c5c;
+    --yellow: #e8b84b;
+    --radius: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; }
+  .horse-icon { font-size: 28px; line-height: 1; }
+
+  .main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+
+  /* Upload */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    margin-bottom: 20px;
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: #1e2235; }
+  .upload-zone input[type=file] { display: none; }
+  .upload-zone .upload-icon { font-size: 34px; margin-bottom: 8px; }
+  .upload-zone p { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
+  .upload-zone strong { color: var(--text); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius); border: none;
+    cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: #4a4e6a; }
+
+  /* Stats */
+  .stats-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .stat-chip {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; font-size: 12px; color: var(--text-dim);
+  }
+  .stat-chip strong { color: var(--text); }
+
+  /* Filters */
+  .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 260px; }
+  .search-wrap svg {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); pointer-events: none;
+  }
+  input[type=text], select {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); font-size: 13px;
+    padding: 8px 12px; outline: none; transition: border-color 0.15s;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+  .search-wrap input { padding-left: 32px; width: 100%; }
+  select {
+    cursor: pointer; appearance: none; padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b90a8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .filter-label { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: var(--surface2); position: sticky; top: 0; z-index: 2; }
+  th {
+    padding: 11px 14px; text-align: left; font-weight: 600;
+    color: var(--text-dim); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.5px; white-space: nowrap; user-select: none;
+    cursor: pointer; border-bottom: 1px solid var(--border); transition: color 0.15s;
+  }
+  th:hover { color: var(--text); }
+  th .si { display: inline-block; margin-left: 4px; font-size: 10px; opacity: 0.4; }
+  th.sort-asc .si::after  { content: '▲'; opacity: 1; }
+  th.sort-desc .si::after { content: '▼'; opacity: 1; }
+  th:not(.sort-asc):not(.sort-desc) .si::after { content: '⇅'; }
+  th.sort-asc, th.sort-desc { color: var(--accent); }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 11px 14px; color: var(--text); white-space: nowrap; }
+
+  td.horse-name { font-weight: 600; color: var(--accent-hover); }
+  td.dim { color: var(--text-dim); }
+
+  .sessions-badge {
+    display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1px 7px; font-size: 11px; color: var(--text-dim);
+  }
+
+  .time-val { font-variant-numeric: tabular-nums; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+  .quality { display: inline-flex; align-items: center; gap: 5px; }
+  .quality-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .q-excellent { color: var(--green); }
+  .q-excellent .quality-dot { background: var(--green); }
+  .q-good      { color: #7bc47b; }
+  .q-good .quality-dot { background: #7bc47b; }
+  .q-fair      { color: var(--yellow); }
+  .q-fair .quality-dot { background: var(--yellow); }
+  .q-difficult { color: #e07b3d; }
+  .q-difficult .quality-dot { background: #e07b3d; }
+  .q-poor      { color: var(--red); }
+  .q-poor .quality-dot { background: var(--red); }
+  .q-na        { color: var(--text-dim); }
+
+  /* Expandable rows */
+  tbody tr.horse-row { cursor: pointer; }
+  tbody tr.horse-row:hover { background: var(--surface2); }
+  tbody tr.horse-row.expanded { background: #1c1f30; }
+  tbody tr.horse-row.expanded:hover { background: #1c1f30; }
+
+  .chevron {
+    display: inline-block; margin-right: 8px; font-size: 10px;
+    color: var(--text-dim); transition: transform 0.2s; vertical-align: middle;
+  }
+  tr.expanded .chevron { transform: rotate(90deg); color: var(--accent); }
+
+  tr.detail-row td {
+    padding: 0;
+    background: #13151f;
+    border-bottom: 2px solid var(--accent) !important;
+  }
+
+  .detail-inner {
+    padding: 12px 20px 16px 36px;
+    overflow-x: auto;
+  }
+
+  .detail-inner table {
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    min-width: 700px;
+  }
+
+  .detail-inner thead { background: #1e2235; }
+
+  .detail-inner th {
+    font-size: 10px; padding: 7px 12px;
+    color: var(--text-dim); cursor: default;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .detail-inner th:hover { color: var(--text-dim); }
+
+  .detail-inner td { padding: 7px 12px; border-bottom: 1px solid #1e2235; }
+  .detail-inner tbody tr:last-child td { border-bottom: none; }
+  .detail-inner tbody tr:hover { background: #1a1d2a; }
+
+  .detail-inner .best-mark { color: var(--accent-hover); font-weight: 600; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 60px 24px; color: var(--text-dim); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* Info banner */
+  .info-banner {
+    background: #1a2035; border: 1px solid #2a3a5a;
+    border-radius: var(--radius); padding: 10px 16px;
+    font-size: 12px; color: #6aade0; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 18px; font-size: 13px;
+    display: none; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  #toast.show  { display: block; animation: fadeIn 0.2s ease; }
+  #toast.error   { border-color: var(--red);   color: var(--red); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  @media (max-width: 600px) {
+    .main { padding: 12px; }
+    .filters { gap: 6px; }
+  }
+
+  /* Lock screen */
+  #lockScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lock-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 40px 36px; text-align: center;
+    width: 100%; max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .lock-icon { font-size: 36px; margin-bottom: 16px; }
+  .lock-box h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .lock-box > p { color: var(--text-dim); font-size: 13px; margin-bottom: 24px; }
+  .lock-box input[type=password] {
+    width: 100%; padding: 10px 14px; font-size: 15px; letter-spacing: 2px;
+    margin-bottom: 12px; border-radius: var(--radius);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); outline: none; transition: border-color 0.15s;
+  }
+  .lock-box input[type=password]:focus { border-color: var(--accent); }
+  .lock-box .btn { width: 100%; justify-content: center; padding: 10px; font-size: 14px; }
+  .lock-error { color: var(--red); font-size: 12px; margin-top: 10px; }
+
+  .logout-btn {
+    margin-left: auto; font-size: 12px; color: var(--text-dim);
+    background: none; border: none; cursor: pointer; padding: 4px 8px;
+    border-radius: var(--radius); transition: color 0.15s;
+  }
+  .logout-btn:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">🐎</div>
+    <h2>Horse Training Data</h2>
+    <p>Enter passcode to continue</p>
+    <input type="password" id="passcodeInput" placeholder="Passcode" autocomplete="current-password">
+    <button class="btn btn-primary" id="unlockBtn">Unlock</button>
+    <p class="lock-error" id="lockError" style="display:none">Incorrect passcode — try again</p>
+  </div>
+</div>
+
+<header>
+  <span class="horse-icon">🐎</span>
+  <div>
+    <h1>Horse Training Data</h1>
+    <div class="subtitle">Arioneo / Equimetre — XLSX &amp; CSV</div>
+  </div>
+  <button class="logout-btn" onclick="logout()" title="Log out">⎋ Log out</button>
+</header>
+
+<div class="main">
+
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept=".xlsx,.csv,.xls" multiple>
+    <div class="upload-icon">📂</div>
+    <p><strong>Drop Arioneo XLSX or CSV files here</strong> or click to browse</p>
+    <p>Multiple files supported · Sessions aggregated per horse · Best performances shown</p>
+    <br>
+    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Choose Files</button>
+    &nbsp;
+    <button class="btn btn-ghost" id="clearBtn" style="display:none">✕ Clear All</button>
+  </div>
+
+  <div id="infoBanner" class="info-banner" style="display:none">
+    ℹ️ Owner and country are not exported by Arioneo — those columns show "—". All other columns are pulled directly from your file.
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none"></div>
+
+  <div class="filters" id="filtersRow" style="display:none">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Search horse name…">
+    </div>
+    <span class="filter-label">Owner:</span>
+    <select id="ownerFilter"><option value="">All</option></select>
+    <span class="filter-label">Country:</span>
+    <select id="countryFilter"><option value="">All</option></select>
+    <span class="filter-label">Age:</span>
+    <select id="ageFilter"><option value="">All</option></select>
+  </div>
+
+  <div id="tableContainer">
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      <p>Upload an Arioneo XLSX file to view horse training data</p>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+(function () {
+  const _k = "QnJAZC1Db3g=";
+  const lock  = document.getElementById('lockScreen');
+  const input = document.getElementById('passcodeInput');
+  const error = document.getElementById('lockError');
+  const btn   = document.getElementById('unlockBtn');
+
+  if (localStorage.getItem('ht_auth') === '1') {
+    lock.style.display = 'none';
+  } else {
+    lock.style.display = 'flex';
+    setTimeout(() => input.focus(), 50);
+  }
+
+  function attempt() {
+    if (input.value === atob(_k)) {
+      localStorage.setItem('ht_auth', '1');
+      lock.style.display = 'none';
+    } else {
+      error.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  btn.addEventListener('click', attempt);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+})();
+
+function logout() {
+  localStorage.removeItem('ht_auth');
+  location.reload();
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let allSessions  = [];   // raw session rows
+let allHorses    = [];   // aggregated per horse
+let sortCol      = 'lastTraining';
+let sortDir      = 'desc';
+let expandedSet  = new Set(); // horse names currently expanded
+
+// ─── Column definitions for display ──────────────────────────────────────────
+const COLS = [
+  { key: 'name',         label: 'Horse',           type: 'string' },
+  { key: 'sessions',     label: 'Sessions',        type: 'number' },
+  { key: 'owner',        label: 'Owner',           type: 'string' },
+  { key: 'country',      label: 'Country',         type: 'string' },
+  { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
+  { key: 'age',          label: 'Age',             type: 'number' },
+  { key: 'best1F',       label: 'Best 1F',         type: 'time'   },
+  { key: 'best5F',       label: 'Best 5F',         type: 'time'   },
+  { key: 'fastRecovery', label: 'Fast Recovery',   type: 'number' },
+  { key: 'rec15min',     label: '15 Min Recovery', type: 'number' },
+];
+
+// ─── Arioneo column name mapping (exact lowercase match) ─────────────────────
+// Returns a map of { field -> columnIndex } from a header row array
+function buildMap(headers) {
+  const h = headers.map(v => String(v ?? '').trim().toLowerCase());
+  const find = (...candidates) => {
+    for (const c of candidates) {
+      const idx = h.findIndex(v => v === c);
+      if (idx !== -1) return idx;
+    }
+    // fallback: partial match
+    for (const c of candidates) {
+      const idx = h.findIndex(v => v.includes(c));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+
+  return {
+    date:         find('date'),
+    horse:        find('horse'),
+    age:          find('age'),
+    sex:          find('sex'),
+    trainingType: find('training type'),
+    trackName:    find('track name'),
+    trackSurface: find('track surface'),
+    workingDist:  find('working distance'),
+    avgSpeed:     find('main working average speed'),
+    maxSpeed:     find('max speed'),
+    best1F:       find('time best 1f', 'time best 1f '),
+    best2F:       find('time best 2f', 'time best 2f '),
+    best3F:       find('time best 3f', 'time best 3f '),
+    best4F:       find('time best 4f', 'time best 4f '),
+    best5F:       find('time best 5f', 'time best 5f '),
+    best6F:       find('time best 6f', 'time best 6f '),
+    fastRecovery: find('fast recovery'),
+    fastRecQual:  find('fast recovery quality'),
+    rec15min:     find('heart rate after 15 min', 'hr after 15 min'),
+    rec15qual:    find('15min recovery quality', '15 min recovery quality'),
+    maxHR:        find('max heart rate reached during training', 'max heart rate'),
+    owner:        find('owner', 'proprietaire', 'proprietario'),
+    country:      find('country', 'pays', 'nation'),
+  };
+}
+
+// ─── Horse name cleaner ───────────────────────────────────────────────────────
+function cleanName(raw) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  // Strip leading "N. " or "N " trainer prefix (but not e.g. "NAUGHTY...")
+  s = s.replace(/^N\.\s+/i, '').replace(/^N\s+(?=[A-Z])/i, '');
+  return s.trim();
+}
+
+// ─── Time parsing: "MM:SS.xx" or "H:MM:SS.xx" or plain seconds ───────────────
+function parseTimeStr(v) {
+  if (v === null || v === undefined || v === '' || v === 'N/A') return null;
+  if (typeof v === 'number') {
+    // SheetJS may give fractional day for time cells
+    if (v > 0 && v < 1) return v * 86400; // convert fraction of day to seconds
+    if (v > 1) return v; // already seconds
+    return null;
+  }
+  const s = String(v).trim();
+  if (!s || s === 'N/A') return null;
+  // H:MM:SS.xx
+  let m = s.match(/^(\d+):(\d{2}):(\d{2})(?:[.,](\d+))?$/);
+  if (m) return +m[1]*3600 + +m[2]*60 + +m[3] + (m[4] ? parseFloat('0.'+m[4]) : 0);
+  // MM:SS.xx  (Arioneo format: "00:13.17")
+  m = s.match(/^(\d+):(\d{2})(?:[.,](\d+))?$/);
+  if (m) return +m[1]*60 + +m[2] + (m[3] ? parseFloat('0.'+m[3]) : 0);
+  // Plain float
+  const f = parseFloat(s);
+  return isNaN(f) ? null : f;
+}
+
+function fmtTime(sec) {
+  if (sec === null || sec === undefined) return '—';
+  const s = parseFloat(sec);
+  if (isNaN(s)) return '—';
+  if (s >= 60) {
+    const m = Math.floor(s / 60);
+    const rem = (s % 60).toFixed(2).padStart(5, '0');
+    return `${m}:${rem}`;
+  }
+  return s.toFixed(2) + 's';
+}
+
+// ─── Date parsing ─────────────────────────────────────────────────────────────
+function parseDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (typeof v === 'number') {
+    // Excel serial date
+    return new Date((v - 25569) * 86400 * 1000);
+  }
+  const s = String(v).trim();
+  // MM/DD/YYYY HH:MM
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[1]-1, +m[2]);
+  // YYYY-MM-DD
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ─── Recovery quality label (from Arioneo quality column) ────────────────────
+function qualityClass(q) {
+  if (!q || q === 'N/A') return 'q-na';
+  switch (String(q).toLowerCase().trim()) {
+    case 'excellent':  return 'q-excellent';
+    case 'good':       return 'q-good';
+    case 'fair':       return 'q-fair';
+    case 'difficult':  return 'q-difficult';
+    case 'poor':       return 'q-poor';
+    default:           return 'q-na';
+  }
+}
+
+// For coloring raw bpm (fast recovery: lower = better; 15min: lower = better)
+function bpmClass(bpm) {
+  if (bpm === null || isNaN(bpm)) return '';
+  if (bpm <= 80)  return 'q-excellent';
+  if (bpm <= 100) return 'q-good';
+  if (bpm <= 120) return 'q-fair';
+  if (bpm <= 150) return 'q-difficult';
+  return 'q-poor';
+}
+
+// ─── Parse worksheet rows into session objects ────────────────────────────────
+function parseRows(rows) {
+  if (!rows || rows.length < 2) return [];
+  const map = buildMap(rows[0]);
+  const sessions = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const get = (idx) => (idx >= 0 && r[idx] !== undefined && r[idx] !== null) ? r[idx] : null;
+    const getStr = (idx) => { const v = get(idx); return v !== null ? String(v).trim() : ''; };
+
+    const rawName = getStr(map.horse);
+    if (!rawName || rawName === 'N/A') continue;
+    const name = cleanName(rawName);
+    if (!name) continue;
+
+    const dateObj = parseDate(get(map.date));
+
+    sessions.push({
+      name,
+      owner:        getStr(map.owner)   || '—',
+      country:      getStr(map.country) || '—',
+      date:         dateObj,
+      age:          parseInt(getStr(map.age))    || null,
+      trainingType: getStr(map.trainingType),
+      trackName:    getStr(map.trackName),
+      trackSurface: getStr(map.trackSurface),
+      workingDist:  parseFloat(getStr(map.workingDist))  || null,
+      avgSpeed:     parseFloat(getStr(map.avgSpeed))     || null,
+      maxSpeed:     parseFloat(getStr(map.maxSpeed))     || null,
+      maxHR:        parseInt(getStr(map.maxHR))          || null,
+      best1F:       parseTimeStr(get(map.best1F)),
+      best2F:       parseTimeStr(get(map.best2F)),
+      best3F:       parseTimeStr(get(map.best3F)),
+      best4F:       parseTimeStr(get(map.best4F)),
+      best5F:       parseTimeStr(get(map.best5F)),
+      best6F:       parseTimeStr(get(map.best6F)),
+      fastRecovery: parseInt(getStr(map.fastRecovery)) || null,
+      fastRecQual:  getStr(map.fastRecQual),
+      rec15min:     parseInt(getStr(map.rec15min))     || null,
+      rec15qual:    getStr(map.rec15qual),
+    });
+  }
+  return sessions;
+}
+
+// ─── Aggregate sessions → one row per horse ───────────────────────────────────
+function aggregateHorses(sessions) {
+  const map = new Map();
+
+  for (const s of sessions) {
+    if (!map.has(s.name)) {
+      map.set(s.name, {
+        name:         s.name,
+        owner:        s.owner,
+        country:      s.country,
+        lastTraining: null,
+        lastTrainingTs: 0,
+        age:          s.age,
+        best1F:       null,
+        best5F:       null,
+        fastRecovery: null,
+        fastRecQual:  null,
+        rec15min:     null,
+        rec15qual:    null,
+        sessions:     0,
+        sessionsList: [],
+      });
+    }
+    const h = map.get(s.name);
+    h.sessions++;
+    h.sessionsList.push(s);
+
+    // Last training date
+    if (s.date && s.date.getTime() > h.lastTrainingTs) {
+      h.lastTrainingTs = s.date.getTime();
+      h.lastTraining   = s.date;
+    }
+
+    // Age (use latest)
+    if (s.age !== null) h.age = s.age;
+
+    // Best 1F: minimum time
+    if (s.best1F !== null && (h.best1F === null || s.best1F < h.best1F)) {
+      h.best1F = s.best1F;
+    }
+
+    // Best 5F: minimum time
+    if (s.best5F !== null && (h.best5F === null || s.best5F < h.best5F)) {
+      h.best5F = s.best5F;
+    }
+
+    // Best fast recovery: lowest bpm (heart most recovered)
+    if (s.fastRecovery !== null && (h.fastRecovery === null || s.fastRecovery < h.fastRecovery)) {
+      h.fastRecovery = s.fastRecovery;
+      h.fastRecQual  = s.fastRecQual;
+    }
+
+    // Best 15min recovery: lowest bpm
+    if (s.rec15min !== null && (h.rec15min === null || s.rec15min < h.rec15min)) {
+      h.rec15min  = s.rec15min;
+      h.rec15qual = s.rec15qual;
+    }
+
+    // Owner/country: first non-— value wins
+    if (h.owner === '—' && s.owner !== '—') h.owner = s.owner;
+    if (h.country === '—' && s.country !== '—') h.country = s.country;
+  }
+
+  return [...map.values()];
+}
+
+// ─── File handling ────────────────────────────────────────────────────────────
+const fileInput  = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') return;
+  fileInput.click();
+});
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('dragover');
+  handleFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => { handleFiles([...fileInput.files]); fileInput.value=''; });
+
+function handleFiles(files) {
+  const valid = files.filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
+  if (!valid.length) { showToast('No XLSX or CSV files found', 'error'); return; }
+
+  let pending = valid.length, addedTotal = 0;
+
+  valid.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const data = new Uint8Array(e.target.result);
+      let rows;
+      try {
+        const wb = XLSX.read(data, { type: 'array', cellDates: false });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+      } catch(err) {
+        showToast('Failed to parse: ' + file.name, 'error');
+        if (--pending === 0) finalize(addedTotal, valid.length);
+        return;
+      }
+
+      const newSessions = parseRows(rows);
+      const before = allSessions.length;
+      // Deduplicate by horse+date
+      const existing = new Set(allSessions.map(s => s.name + '|' + (s.date?.getTime() ?? '')));
+      for (const s of newSessions) {
+        const key = s.name + '|' + (s.date?.getTime() ?? '');
+        if (!existing.has(key)) { allSessions.push(s); existing.add(key); }
+      }
+      addedTotal += allSessions.length - before;
+
+      if (--pending === 0) finalize(addedTotal, valid.length);
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function finalize(added, fileCount) {
+  allHorses = aggregateHorses(allSessions);
+  showToast(`Loaded ${added} new sessions · ${allHorses.length} horses`, 'success');
+  render();
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  allSessions = []; allHorses = [];
+  document.getElementById('searchInput').value = '';
+  ['ownerFilter','countryFilter','ageFilter'].forEach(id => document.getElementById(id).value = '');
+  render();
+});
+
+// ─── Filter & Sort ────────────────────────────────────────────────────────────
+function getFiltered() {
+  const q   = document.getElementById('searchInput').value.toLowerCase().trim();
+  const own = document.getElementById('ownerFilter').value;
+  const cnt = document.getElementById('countryFilter').value;
+  const age = document.getElementById('ageFilter').value;
+
+  return allHorses.filter(h => {
+    if (q   && !h.name.toLowerCase().includes(q)) return false;
+    if (own && h.owner   !== own)        return false;
+    if (cnt && h.country !== cnt)        return false;
+    if (age && String(h.age ?? '') !== age) return false;
+    return true;
+  });
+}
+
+function sortHorses(arr) {
+  return [...arr].sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (sortCol === 'lastTraining') { va = a.lastTrainingTs; vb = b.lastTrainingTs; }
+
+    const nullVal = sortDir === 'asc' ? Infinity : -Infinity;
+    if (va === null || va === undefined || va === '—') va = nullVal;
+    if (vb === null || vb === undefined || vb === '—') vb = nullVal;
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ?  1 : -1;
+    return 0;
+  });
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const hasData = allHorses.length > 0;
+  populateDropdowns();
+
+  const filtered = getFiltered();
+  const sorted   = sortHorses(filtered);
+
+  document.getElementById('statsBar').style.display    = hasData ? 'flex'  : 'none';
+  document.getElementById('filtersRow').style.display  = hasData ? 'flex'  : 'none';
+  document.getElementById('infoBanner').style.display  = hasData ? 'flex'  : 'none';
+  document.getElementById('clearBtn').style.display    = hasData ? 'inline-flex' : 'none';
+
+  if (hasData) renderStats(filtered.length);
+  renderTable(sorted);
+}
+
+function renderStats(shown) {
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-chip"><strong>${allHorses.length}</strong> horses</div>
+    <div class="stat-chip">Showing <strong>${shown}</strong></div>
+    <div class="stat-chip"><strong>${allSessions.length}</strong> total sessions</div>
+  `;
+}
+
+function populateDropdowns() {
+  const owners    = [...new Set(allHorses.map(h => h.owner))].filter(v=>v&&v!=='—').sort();
+  const countries = [...new Set(allHorses.map(h => h.country))].filter(v=>v&&v!=='—').sort();
+  const ages      = [...new Set(allHorses.map(h => h.age !== null ? String(h.age) : ''))].filter(Boolean).sort((a,b)=>+a-+b);
+
+  fillSelect('ownerFilter',   owners);
+  fillSelect('countryFilter', countries);
+  fillSelect('ageFilter',     ages);
+}
+
+function fillSelect(id, opts) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All</option>' +
+    opts.map(o => `<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}</option>`).join('');
+}
+
+function renderTable(rows) {
+  const container = document.getElementById('tableContainer');
+
+  if (!rows.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="icon">${allHorses.length ? '🔍' : '📋'}</div>
+      <p>${allHorses.length ? 'No horses match your filters' : 'Upload an Arioneo XLSX file to view horse training data'}</p>
+    </div>`;
+    return;
+  }
+
+  const headers = COLS.map(col => {
+    const cls = sortCol === col.key ? (sortDir === 'asc' ? 'sort-asc' : 'sort-desc') : '';
+    return `<th class="${cls}" data-col="${col.key}">${col.label}<span class="si"></span></th>`;
+  }).join('');
+
+  const bodyRows = rows.map(h => {
+    const isOpen = expandedSet.has(h.name);
+    const frClass  = h.fastRecQual ? qualityClass(h.fastRecQual) : bpmClass(h.fastRecovery);
+    const r15Class = h.rec15qual   ? qualityClass(h.rec15qual)   : bpmClass(h.rec15min);
+
+    const frLabel = h.fastRecovery !== null
+      ? `<span class="quality ${frClass}"><span class="quality-dot"></span>${h.fastRecovery} bpm${h.fastRecQual && h.fastRecQual!=='N/A' ? ' · '+h.fastRecQual : ''}</span>`
+      : '—';
+
+    const r15Label = h.rec15min !== null
+      ? `<span class="quality ${r15Class}"><span class="quality-dot"></span>${h.rec15min} bpm${h.rec15qual && h.rec15qual!=='N/A' ? ' · '+h.rec15qual : ''}</span>`
+      : '—';
+
+    const mainRow = `<tr class="horse-row${isOpen?' expanded':''}" data-horse="${esc(h.name)}">
+      <td class="horse-name"><span class="chevron">▶</span>${esc(h.name)}</td>
+      <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
+      <td class="dim">${esc(h.owner)}</td>
+      <td class="dim">${esc(h.country)}</td>
+      <td class="dim">${fmtDate(h.lastTraining)}</td>
+      <td>${h.age !== null ? h.age + ' yr' : '—'}</td>
+      <td class="time-val">${fmtTime(h.best1F)}</td>
+      <td class="time-val">${fmtTime(h.best5F)}</td>
+      <td>${frLabel}</td>
+      <td>${r15Label}</td>
+    </tr>`;
+
+    const detailRow = isOpen
+      ? `<tr class="detail-row" data-detail="${esc(h.name)}"><td colspan="${COLS.length}">${renderDetailInner(h)}</td></tr>`
+      : `<tr class="detail-row" data-detail="${esc(h.name)}" style="display:none"><td colspan="${COLS.length}"></td></tr>`;
+
+    return mainRow + detailRow;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+
+  // Sort header clicks
+  container.querySelectorAll('th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      else { sortCol = col; sortDir = 'asc'; }
+      render();
+    });
+  });
+
+  // Row expand/collapse
+  container.querySelectorAll('tr.horse-row').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const name = tr.dataset.horse;
+      const horse = allHorses.find(h => h.name === name);
+      if (!horse) return;
+
+      const detailTr = tr.nextElementSibling;
+      if (expandedSet.has(name)) {
+        expandedSet.delete(name);
+        tr.classList.remove('expanded');
+        detailTr.style.display = 'none';
+      } else {
+        expandedSet.add(name);
+        tr.classList.add('expanded');
+        detailTr.querySelector('td').innerHTML = renderDetailInner(horse);
+        detailTr.style.display = '';
+      }
+    });
+  });
+}
+
+function renderDetailInner(horse) {
+  // Sort sessions newest first
+  const sessions = [...horse.sessionsList].sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
+
+  // Find best values to highlight
+  const best1F = Math.min(...sessions.map(s => s.best1F ?? Infinity));
+  const best5F = Math.min(...sessions.map(s => s.best5F ?? Infinity));
+
+  const sessionRows = sessions.map(s => {
+    const mark1F = s.best1F !== null && s.best1F === best1F ? ' best-mark' : '';
+    const mark5F = s.best5F !== null && s.best5F === best5F ? ' best-mark' : '';
+    const frC  = s.fastRecQual ? qualityClass(s.fastRecQual) : bpmClass(s.fastRecovery);
+    const r15C = s.rec15qual   ? qualityClass(s.rec15qual)   : bpmClass(s.rec15min);
+
+    const frCell = s.fastRecovery !== null
+      ? `<span class="quality ${frC}"><span class="quality-dot"></span>${s.fastRecovery}${s.fastRecQual && s.fastRecQual!=='N/A' ? ' · '+s.fastRecQual : ''}</span>`
+      : '—';
+    const r15Cell = s.rec15min !== null
+      ? `<span class="quality ${r15C}"><span class="quality-dot"></span>${s.rec15min}${s.rec15qual && s.rec15qual!=='N/A' ? ' · '+s.rec15qual : ''}</span>`
+      : '—';
+
+    const dist  = s.workingDist !== null ? s.workingDist.toFixed(2) + ' f' : '—';
+    const avg   = s.avgSpeed    !== null ? s.avgSpeed.toFixed(1) + ' mph'  : '—';
+    const maxS  = s.maxSpeed    !== null ? s.maxSpeed.toFixed(1) + ' mph'  : '—';
+    const maxHR = s.maxHR       !== null ? s.maxHR + ' bpm'               : '—';
+
+    return `<tr>
+      <td class="dim">${fmtDate(s.date)}</td>
+      <td>${dist}</td>
+      <td>${avg}</td>
+      <td>${maxS}</td>
+      <td class="time-val${mark1F}">${fmtTime(s.best1F)}</td>
+      <td class="time-val">${fmtTime(s.best2F)}</td>
+      <td class="time-val">${fmtTime(s.best3F)}</td>
+      <td class="time-val">${fmtTime(s.best4F)}</td>
+      <td class="time-val${mark5F}">${fmtTime(s.best5F)}</td>
+      <td class="time-val">${fmtTime(s.best6F)}</td>
+      <td class="dim">${maxHR}</td>
+      <td>${frCell}</td>
+      <td>${r15Cell}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="detail-inner">
+    <table>
+      <thead><tr>
+        <th>Date</th>
+        <th>Distance</th>
+        <th>Avg Speed</th>
+        <th>Max Speed</th>
+        <th>1F ★</th>
+        <th>2F</th>
+        <th>3F</th>
+        <th>4F</th>
+        <th>5F ★</th>
+        <th>6F</th>
+        <th>Max HR</th>
+        <th>Fast Rec</th>
+        <th>15 Min Rec</th>
+      </tr></thead>
+      <tbody>${sessionRows}</tbody>
+    </table>
+  </div>`;
+}
+
+['searchInput','ownerFilter','countryFilter','ageFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+  document.getElementById(id).addEventListener('change', render);
+});
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ' '+type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className='', 3500);
+}
+</script>
+</body>
+</html>
