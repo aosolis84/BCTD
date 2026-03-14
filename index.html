@@ -797,7 +797,8 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore(firebase.app(), { experimentalForceLongPolling: true });
+const db = firebase.firestore();
+try { db.settings({ experimentalForceLongPolling: true }); } catch(e) {}
 const FS_DOC = db.collection('horseData').doc('sessions');
 
 function setSyncStatus(status) {
