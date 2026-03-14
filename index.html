@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Horse Training Data</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -786,20 +784,9 @@ async function loadSessions() {
   await loadFromFirestore();
 }
 
-// ─── Firebase Sync ────────────────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey:            "AIzaSyCxhJl4hccNl7YcHj3j9ZdI4PA_a9iNaTI",
-  authDomain:        "bctd-sync.firebaseapp.com",
-  projectId:         "bctd-sync",
-  storageBucket:     "bctd-sync.firebasestorage.app",
-  messagingSenderId: "678619018655",
-  appId:             "1:678619018655:web:1964b168229060f9d679aa",
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-try { db.settings({ experimentalForceLongPolling: true }); } catch(e) {}
-const FS_DOC = db.collection('horseData').doc('sessions');
+// ─── Firebase Sync (REST API) ─────────────────────────────────────────────────
+const FS_KEY  = "AIzaSyCxhJl4hccNl7YcHj3j9ZdI4PA_a9iNaTI";
+const FS_URL  = "https://firestore.googleapis.com/v1/projects/bctd-sync/databases/(default)/documents/horseData/sessions";
 
 function setSyncStatus(status) {
   const btn = document.getElementById('syncBtn');
@@ -816,9 +803,13 @@ function setSyncStatus(status) {
 async function loadFromFirestore() {
   setSyncStatus('syncing');
   try {
-    const snap = await FS_DOC.get();
-    if (!snap.exists || !snap.data().sessions) { setSyncStatus('synced'); return false; }
-    const data = JSON.parse(snap.data().sessions);
+    const res = await fetch(FS_URL + '?key=' + FS_KEY);
+    if (res.status === 404) { setSyncStatus('synced'); return false; }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const doc = await res.json();
+    const str = doc.fields?.sessions?.stringValue;
+    if (!str) { setSyncStatus('synced'); return false; }
+    const data = JSON.parse(str);
     allSessions = data.map(s => ({ ...s, date: s.date ? new Date(s.date) : null }));
     allHorses   = aggregateHorses(allSessions);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -836,7 +827,18 @@ async function saveToFirestore() {
   setSyncStatus('syncing');
   try {
     const data = allSessions.map(s => ({ ...s, date: s.date ? s.date.getTime() : null }));
-    await FS_DOC.set({ sessions: JSON.stringify(data), updatedAt: new Date().toISOString() });
+    const body = {
+      fields: {
+        sessions:  { stringValue: JSON.stringify(data) },
+        updatedAt: { stringValue: new Date().toISOString() },
+      }
+    };
+    const res = await fetch(FS_URL + '?key=' + FS_KEY, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     setSyncStatus('synced');
   } catch(e) {
     setSyncStatus('error');
