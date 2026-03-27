@@ -442,7 +442,6 @@ const COLS = [
   { key: 'name',         label: 'Horse',           type: 'string' },
   { key: 'sessions',     label: 'Sessions',        type: 'number' },
   { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
-  { key: 'last1F',       label: 'Last 1F',         type: 'time'   },
   { key: 'last4F',       label: 'Last 4F',         type: 'time'   },
   { key: 'last5F',       label: 'Last 5F',         type: 'time'   },
   { key: 'lastFastRec',  label: 'Fast Recovery',   type: 'number' },
@@ -1129,7 +1128,6 @@ function renderTable(rows) {
       <td class="horse-name">${esc(h.name)}</td>
       <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
       <td class="dim">${fmtDate(h.lastTraining)}</td>
-      <td class="time-val">${fmtTime(h.last1F)}</td>
       <td class="time-val">${fmtTime(h.last4F)}</td>
       <td class="time-val">${fmtTime(h.last5F)}</td>
       <td>${frLabel}</td>
