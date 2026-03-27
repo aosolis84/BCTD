@@ -141,12 +141,12 @@
 
   .quality { display: inline-flex; align-items: center; gap: 5px; }
   .quality-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-  .q-blue      { color: #2f81f7; }
-  .q-blue .quality-dot { background: #2f81f7; }
-  .q-excellent { color: var(--green); }
-  .q-excellent .quality-dot { background: var(--green); }
+  .q-excellent { color: #2f81f7; }
+  .q-excellent .quality-dot { background: #2f81f7; }
   .q-good      { color: #7bc47b; }
   .q-good .quality-dot { background: #7bc47b; }
+  .q-average   { color: #e6edf3; }
+  .q-average .quality-dot { background: #e6edf3; }
   .q-fair      { color: var(--yellow); }
   .q-fair .quality-dot { background: var(--yellow); }
   .q-difficult { color: #e07b3d; }
@@ -177,9 +177,9 @@
   .best-mark { color: var(--accent-hover); font-weight: 600; }
 
   /* Cell background quality colors */
-  td.bg-blue      { background: rgba(47,129,247,0.18); color: #2f81f7; font-weight: 600; }
-  td.bg-excellent { background: rgba(61,190,138,0.18); color: #3dbe8a; font-weight: 600; }
+  td.bg-excellent { background: rgba(47,129,247,0.18);   color: #2f81f7; font-weight: 600; }
   td.bg-good      { background: rgba(123,196,123,0.18); color: #7bc47b; font-weight: 600; }
+  td.bg-average   { background: rgba(230,237,243,0.12); color: #e6edf3; font-weight: 600; }
   td.bg-fair      { background: rgba(232,184,75,0.18);  color: #e8b84b; font-weight: 600; }
   td.bg-difficult { background: rgba(224,123,61,0.18);  color: #e07b3d; font-weight: 600; }
   td.bg-poor      { background: rgba(224,92,92,0.18);   color: #e05c5c; font-weight: 600; }
@@ -585,6 +585,7 @@ function qualityClass(q) {
   switch (String(q).toLowerCase().trim()) {
     case 'excellent':  return 'q-excellent';
     case 'good':       return 'q-good';
+    case 'average':    return 'q-average';
     case 'fair':       return 'q-fair';
     case 'difficult':  return 'q-difficult';
     case 'poor':       return 'q-poor';
@@ -595,19 +596,22 @@ function qualityClass(q) {
 // For coloring raw bpm — Fast Recovery thresholds
 function bpmClass(bpm) {
   if (bpm == null || isNaN(bpm)) return '';
-  if (bpm <= 105) return 'q-blue';
+  if (bpm <= 105) return 'q-excellent';
   if (bpm <= 120) return 'q-good';
-  if (bpm <= 135) return 'q-fair';
-  if (bpm <= 145) return 'q-difficult';
+  if (bpm <= 135) return 'q-average';
+  if (bpm <= 145) return 'q-fair';
+  if (bpm <= 155) return 'q-difficult';
   return 'q-poor';
 }
 
 // 15 Min Recovery thresholds
 function bpmClass15(bpm) {
   if (bpm == null || isNaN(bpm)) return '';
-  if (bpm <= 80)  return 'q-blue';
-  if (bpm <= 102) return 'q-good';
-  if (bpm <= 115) return 'q-fair';
+  if (bpm <= 70)  return 'q-excellent';
+  if (bpm <= 85)  return 'q-good';
+  if (bpm <= 95)  return 'q-average';
+  if (bpm <= 105) return 'q-fair';
+  if (bpm <= 125) return 'q-difficult';
   return 'q-poor';
 }
 
@@ -616,6 +620,7 @@ function qualityBg(q) {
   switch (String(q).toLowerCase().trim()) {
     case 'excellent':  return 'bg-excellent';
     case 'good':       return 'bg-good';
+    case 'average':    return 'bg-average';
     case 'fair':       return 'bg-fair';
     case 'difficult':  return 'bg-difficult';
     case 'poor':       return 'bg-poor';
@@ -625,18 +630,21 @@ function qualityBg(q) {
 
 function bpmBg(bpm) {
   if (bpm == null || isNaN(bpm)) return 'bg-na';
-  if (bpm <= 105) return 'bg-blue';
+  if (bpm <= 105) return 'bg-excellent';
   if (bpm <= 120) return 'bg-good';
-  if (bpm <= 135) return 'bg-fair';
-  if (bpm <= 145) return 'bg-difficult';
+  if (bpm <= 135) return 'bg-average';
+  if (bpm <= 145) return 'bg-fair';
+  if (bpm <= 155) return 'bg-difficult';
   return 'bg-poor';
 }
 
 function bpmBg15(bpm) {
   if (bpm == null || isNaN(bpm)) return 'bg-na';
-  if (bpm <= 80)  return 'bg-blue';
-  if (bpm <= 102) return 'bg-good';
-  if (bpm <= 115) return 'bg-fair';
+  if (bpm <= 70)  return 'bg-excellent';
+  if (bpm <= 85)  return 'bg-good';
+  if (bpm <= 95)  return 'bg-average';
+  if (bpm <= 105) return 'bg-fair';
+  if (bpm <= 125) return 'bg-difficult';
   return 'bg-poor';
 }
 
