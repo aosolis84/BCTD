@@ -443,6 +443,7 @@ const COLS = [
   { key: 'sessions',     label: 'Sessions',        type: 'number' },
   { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
   { key: 'last1F',       label: 'Last 1F',         type: 'time'   },
+  { key: 'last4F',       label: 'Last 4F',         type: 'time'   },
   { key: 'last5F',       label: 'Last 5F',         type: 'time'   },
   { key: 'lastFastRec',  label: 'Fast Recovery',   type: 'number' },
   { key: 'lastRec15',    label: '15 Min Recovery', type: 'number' },
@@ -748,6 +749,7 @@ function aggregateHorses(sessions) {
         age:            s.age,
         sex:            s.sex,
         last1F:         null,
+        last4F:         null,
         last5F:         null,
         lastFastRec:    null,
         lastFastRecQual:null,
@@ -766,6 +768,7 @@ function aggregateHorses(sessions) {
       h.lastTrainingTs  = s.date.getTime();
       h.lastTraining    = s.date;
       h.last1F          = s.best1F;
+      h.last4F          = s.best4F;
       h.last5F          = s.best5F;
       h.lastFastRec     = s.fastRecovery;
       h.lastFastRecQual = s.fastRecQual;
@@ -1127,6 +1130,7 @@ function renderTable(rows) {
       <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
       <td class="dim">${fmtDate(h.lastTraining)}</td>
       <td class="time-val">${fmtTime(h.last1F)}</td>
+      <td class="time-val">${fmtTime(h.last4F)}</td>
       <td class="time-val">${fmtTime(h.last5F)}</td>
       <td>${frLabel}</td>
       <td>${r15Label}</td>
