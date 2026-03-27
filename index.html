@@ -442,8 +442,6 @@ const COLS = [
   { key: 'name',         label: 'Horse',           type: 'string' },
   { key: 'sessions',     label: 'Sessions',        type: 'number' },
   { key: 'lastTraining', label: 'Last Training',   type: 'date'   },
-  { key: 'age',          label: 'Age',             type: 'number' },
-  { key: 'sex',          label: 'Sex',             type: 'string' },
   { key: 'last1F',       label: 'Last 1F',         type: 'time'   },
   { key: 'last5F',       label: 'Last 5F',         type: 'time'   },
   { key: 'lastFastRec',  label: 'Fast Recovery',   type: 'number' },
@@ -591,6 +589,28 @@ function qualityClass(q) {
     case 'poor':       return 'q-poor';
     default:           return 'q-na';
   }
+}
+
+// Label from BPM — Fast Recovery
+function bpmLabel(bpm) {
+  if (bpm == null || isNaN(bpm)) return null;
+  if (bpm <= 105) return 'Excellent';
+  if (bpm <= 120) return 'Good';
+  if (bpm <= 135) return 'Average';
+  if (bpm <= 145) return 'Fair';
+  if (bpm <= 155) return 'Difficult';
+  return 'Poor';
+}
+
+// Label from BPM — 15 Min Recovery
+function bpmLabel15(bpm) {
+  if (bpm == null || isNaN(bpm)) return null;
+  if (bpm <= 70)  return 'Excellent';
+  if (bpm <= 85)  return 'Good';
+  if (bpm <= 95)  return 'Average';
+  if (bpm <= 105) return 'Fair';
+  if (bpm <= 125) return 'Difficult';
+  return 'Poor';
 }
 
 // For coloring raw bpm — Fast Recovery thresholds
@@ -1095,19 +1115,17 @@ function renderTable(rows) {
     const r15Class = bpmClass15(h.lastRec15);
 
     const frLabel = h.lastFastRec !== null
-      ? `<span class="quality ${frClass}"><span class="quality-dot"></span>${h.lastFastRec} bpm${h.lastFastRecQual && h.lastFastRecQual!=='N/A' ? ' · '+h.lastFastRecQual : ''}</span>`
+      ? `<span class="quality ${frClass}"><span class="quality-dot"></span>${h.lastFastRec} bpm · ${bpmLabel(h.lastFastRec)}</span>`
       : '—';
 
     const r15Label = h.lastRec15 !== null
-      ? `<span class="quality ${r15Class}"><span class="quality-dot"></span>${h.lastRec15} bpm${h.lastRec15qual && h.lastRec15qual!=='N/A' ? ' · '+h.lastRec15qual : ''}</span>`
+      ? `<span class="quality ${r15Class}"><span class="quality-dot"></span>${h.lastRec15} bpm · ${bpmLabel15(h.lastRec15)}</span>`
       : '—';
 
     return `<tr class="horse-row" data-horse="${esc(h.name)}">
       <td class="horse-name">${esc(h.name)}</td>
       <td class="dim"><span class="sessions-badge">${h.sessions}</span></td>
       <td class="dim">${fmtDate(h.lastTraining)}</td>
-      <td>${h.age !== null ? h.age + ' yr' : '—'}</td>
-      <td class="dim">${esc(h.sex || '—')}</td>
       <td class="time-val">${fmtTime(h.last1F)}</td>
       <td class="time-val">${fmtTime(h.last5F)}</td>
       <td>${frLabel}</td>
@@ -1213,14 +1231,14 @@ function renderDetailCell(s, key, best) {
       const mk = isBest(s.fastRecovery, best.fastRecovery) ? ' best-mark' : '';
       return `<td class="${bg}${mk}">${s.fastRecovery != null ? s.fastRecovery : '—'}</td>`;
     }
-    case 'fastRecQual':   return `<td class="${qualityBg(s.fastRecQual)}">${esc(s.fastRecQual || '—')}</td>`;
+    case 'fastRecQual': { const lbl = bpmLabel(s.fastRecovery) || '—'; return `<td class="${qualityBg(lbl)}">${lbl}</td>`; }
     case 'fastRecPct':    return `<td>${s.fastRecPct != null ? s.fastRecPct.toFixed(1) + '%' : '—'}</td>`;
     case 'rec15min': {
       const bg = bpmBg15(s.rec15min);
       const mk = isBest(s.rec15min, best.rec15min) ? ' best-mark' : '';
       return `<td class="${bg}${mk}">${s.rec15min != null ? s.rec15min : '—'}</td>`;
     }
-    case 'rec15qual':     return `<td class="${qualityBg(s.rec15qual)}">${esc(s.rec15qual || '—')}</td>`;
+    case 'rec15qual': { const lbl = bpmLabel15(s.rec15min) || '—'; return `<td class="${qualityBg(lbl)}">${lbl}</td>`; }
     case 'rec15pct':      return `<td>${s.rec15pct != null ? s.rec15pct.toFixed(1) + '%' : '—'}</td>`;
     case 'maxSL':         return `<td>${s.maxSL != null ? s.maxSL.toFixed(2) : '—'}</td>`;
     case 'slGallop':      return `<td>${s.slGallop != null ? s.slGallop.toFixed(2) : '—'}</td>`;
