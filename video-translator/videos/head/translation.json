@@ -1,0 +1,180 @@
+{
+  "source": {
+    "url": "https://x.com/equidia/status/2091499064177123357",
+    "author": "Equidia (@equidia)",
+    "title": "Christopher Head after Prix du Calvados (Gr. II) with Woot Woot — Deauville",
+    "tweet": "Je l'aime depuis le début de la saison. C'est ma meilleure pouliche — Entraîneur lauréat du Prix du Calvados (Gr. 2) avec Woot Woot",
+    "duration": 62.95,
+    "source_lang": "fr"
+  },
+  "cues": [
+    {
+      "start": 0.0,
+      "end": 2.0,
+      "fr": "Est-ce qu'elle vous épatent aujourd'hui ?",
+      "en": "Did she impress you today?",
+      "es": "¿Les impresionó hoy?"
+    },
+    {
+      "start": 2.0,
+      "end": 5.0,
+      "fr": "Elle me surprend vraiment, parce que c'est vrai d'être tombée devant comme ça…",
+      "en": "She really surprises me — it's true that she ended up in front like that…",
+      "es": "Me sorprende de verdad — es cierto que acabó delante así…"
+    },
+    {
+      "start": 5.0,
+      "end": 9.0,
+      "fr": "Christophe a fait un très, très beau travail avec cette monte, ça a été incroyable.",
+      "en": "Christophe did a very, very good job on this ride — it was incredible.",
+      "es": "Christophe hizo un trabajo magnífico en esta monta — fue increíble."
+    },
+    {
+      "start": 9.0,
+      "end": 12.0,
+      "fr": "Il a vraiment pris ses responsabilités, il a été devant.",
+      "en": "He really took responsibility; he was in front.",
+      "es": "Asumió de verdad sus responsabilidades; fue delante."
+    },
+    {
+      "start": 12.0,
+      "end": 15.0,
+      "fr": "Son aptitude au terrain a aussi beaucoup compté.",
+      "en": "Her aptitude for the ground also made a big difference.",
+      "es": "Su aptitud para el terreno también contó mucho."
+    },
+    {
+      "start": 15.0,
+      "end": 17.0,
+      "fr": "C'est vraiment une très bonne pouliche. Je l'aime depuis le début de la saison.",
+      "en": "She's a really good filly. I've liked her since the start of the season.",
+      "es": "Es una potranca muy buena. Me gusta desde el inicio de la temporada."
+    },
+    {
+      "start": 17.0,
+      "end": 19.0,
+      "fr": "J'en fais ma meilleure pouliche.",
+      "en": "She's my best filly.",
+      "es": "Es mi mejor potranca."
+    },
+    {
+      "start": 19.0,
+      "end": 22.0,
+      "fr": "Et je pense qu'elle va continuer à faire de belles choses d'ici la fin de l'année.",
+      "en": "And I think she'll keep doing good things between now and the end of the year.",
+      "es": "Y creo que seguirá haciendo cosas bonitas hasta fin de año."
+    },
+    {
+      "start": 22.0,
+      "end": 24.0,
+      "fr": "Vous ne préférez pas Data qui a fait des trucs l'autre jour ?",
+      "en": "Don't you prefer Data, who did well the other day?",
+      "es": "¿No prefieren a Data, que lo hizo bien el otro día?"
+    },
+    {
+      "start": 24.0,
+      "end": 26.0,
+      "fr": "Si, évidemment, je les aime toutes.",
+      "en": "Yes, of course — I love them all.",
+      "es": "Sí, claro — las quiero a todas."
+    },
+    {
+      "start": 26.0,
+      "end": 29.0,
+      "fr": "C'est évident que je m'attendais, comme elles avaient un peu le même niveau,",
+      "en": "Obviously I expected, since they were at roughly the same level,",
+      "es": "Era obvio que, como estaban a un nivel parecido,"
+    },
+    {
+      "start": 29.0,
+      "end": 34.0,
+      "fr": "à pouvoir les voir finir ensemble. Aujourd'hui, on voit vraiment ce que Woot Woot est capable de faire.",
+      "en": "to see them finish together. Today we really see what Woot Woot can do.",
+      "es": "esperaba verlas terminar juntas. Hoy vemos de verdad lo que Woot Woot puede hacer."
+    },
+    {
+      "start": 34.0,
+      "end": 36.0,
+      "fr": "Celle-ci, qu'est-ce qu'elle a de plus que les autres, Woot Woot ?",
+      "en": "This one — what does Woot Woot have more than the others?",
+      "es": "Esta — ¿qué tiene Woot Woot más que las demás?"
+    },
+    {
+      "start": 36.0,
+      "end": 38.0,
+      "fr": "Elle est incroyable.",
+      "en": "She's incredible.",
+      "es": "Es increíble."
+    },
+    {
+      "start": 38.0,
+      "end": 40.0,
+      "fr": "Depuis le début, elle répond présente.",
+      "en": "From the start, she's always there when you ask.",
+      "es": "Desde el principio, responde siempre."
+    },
+    {
+      "start": 40.0,
+      "end": 42.0,
+      "fr": "Depuis le début de la saison au niveau des travaux,",
+      "en": "Since the start of the season in her work,",
+      "es": "Desde el inicio de temporada en los trabajos,"
+    },
+    {
+      "start": 42.0,
+      "end": 45.0,
+      "fr": "et elle a toujours été très résistante.",
+      "en": "and she's always been very tough.",
+      "es": "y siempre ha sido muy resistente."
+    },
+    {
+      "start": 45.0,
+      "end": 48.0,
+      "fr": "C'est vraiment une très bonne pouliche par Sumbe.",
+      "en": "She's a really good filly by Sumbe.",
+      "es": "Es una potranca muy buena, hija de Sumbe."
+    },
+    {
+      "start": 48.0,
+      "end": 50.0,
+      "fr": "Je les affectionne toutes particulièrement.",
+      "en": "I'm especially fond of all of them.",
+      "es": "Les tengo cariño a todas, especialmente."
+    },
+    {
+      "start": 50.0,
+      "end": 52.0,
+      "fr": "Et d'ici la fin de l'année, je pense qu'elle fera de jolis voyages.",
+      "en": "And by the end of the year, I think she'll make some nice trips.",
+      "es": "Y de aquí a fin de año, creo que hará buenos viajes."
+    },
+    {
+      "start": 52.0,
+      "end": 54.0,
+      "fr": "Est-ce que c'est une pouliche pour le Marcel Boussac ?",
+      "en": "Is she a filly for the Marcel Boussac?",
+      "es": "¿Es una potranca para el Marcel Boussac?"
+    },
+    {
+      "start": 54.0,
+      "end": 60.0,
+      "fr": "On le garde en option, mais pour ses propriétaires, c'est évident qu'on garde aussi la Breeders' Cup.",
+      "en": "We keep that as an option, but for her owners it's obvious we're also keeping the Breeders' Cup in mind.",
+      "es": "Lo dejamos como opción, pero para sus propietarios es obvio que también pensamos en la Breeders' Cup."
+    },
+    {
+      "start": 60.0,
+      "end": 62.0,
+      "fr": "C'est américain ?",
+      "en": "That's in America?",
+      "es": "¿Eso es en América?"
+    },
+    {
+      "start": 62.0,
+      "end": 62.95,
+      "fr": "Oui.",
+      "en": "Yes.",
+      "es": "Sí."
+    }
+  ]
+}

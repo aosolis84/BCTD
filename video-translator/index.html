@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Translator — Woot Woot · Soumillon</title>
+<title>Video Translator — Deauville · Woot Woot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --turf: #0f2a1f;
-    --turf-mid: #163528;
     --leaf: #2d6a4f;
     --gold: #d4a017;
     --gold-soft: #f0d78c;
@@ -44,7 +43,7 @@
     align-items: end;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     animation: rise 0.7s ease both;
   }
 
@@ -66,6 +65,38 @@
   }
 
   .meta a { color: var(--gold-soft); }
+
+  .picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+    animation: rise 0.75s ease both;
+  }
+
+  .pick-btn {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: rgba(11, 22, 17, 0.45);
+    color: var(--cream);
+    font: 500 0.85rem Outfit, sans-serif;
+    padding: 0.7rem 1rem;
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: left;
+    min-width: min(100%, 280px);
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  }
+
+  .pick-btn:hover { border-color: rgba(212, 160, 23, 0.55); transform: translateY(-1px); }
+  .pick-btn.active {
+    background: linear-gradient(135deg, rgba(212, 160, 23, 0.22), rgba(45, 106, 79, 0.28));
+    border-color: var(--gold);
+    box-shadow: inset 0 0 0 1px rgba(212, 160, 23, 0.25);
+  }
+
+  .pick-btn strong { display: block; font-size: 0.92rem; margin-bottom: 0.15rem; }
+  .pick-btn small { color: var(--mist); font-size: 0.78rem; }
 
   .stage {
     display: grid;
@@ -92,10 +123,12 @@
   .player-wrap {
     position: relative;
     background: #000;
-    aspect-ratio: 9 / 16;
+    aspect-ratio: 16 / 9;
     max-height: min(72vh, 640px);
     margin: 0 auto;
   }
+
+  .player-wrap.portrait { aspect-ratio: 9 / 16; max-width: min(100%, 360px); }
 
   video {
     width: 100%;
@@ -191,10 +224,7 @@
     letter-spacing: 0.03em;
   }
 
-  .cue-text {
-    line-height: 1.45;
-    font-size: 0.98rem;
-  }
+  .cue-text { line-height: 1.45; font-size: 0.98rem; }
 
   .cue-src {
     margin-top: 0.45rem;
@@ -222,18 +252,15 @@
       <div>
         <div class="brand">Video <span>Translator</span></div>
       </div>
-      <p class="meta" id="meta">Loading translation…</p>
+      <p class="meta" id="meta">Loading…</p>
     </header>
+
+    <div class="picker" id="picker" role="tablist" aria-label="Choose interview"></div>
 
     <div class="stage">
       <section class="player-panel">
-        <div class="player-wrap">
-          <video id="player" controls playsinline preload="metadata">
-            <source src="media/source.mp4" type="video/mp4">
-            <track id="track-fr" kind="captions" srclang="fr" label="Français" src="media/fr.vtt">
-            <track id="track-en" kind="captions" srclang="en" label="English" src="media/en.vtt" default>
-            <track id="track-es" kind="captions" srclang="es" label="Español" src="media/es.vtt">
-          </video>
+        <div class="player-wrap" id="player-wrap">
+          <video id="player" controls playsinline preload="metadata"></video>
         </div>
         <div class="controls" role="group" aria-label="Caption language">
           <button class="lang-btn" data-lang="fr" type="button">Français</button>
@@ -252,16 +279,20 @@
     </div>
 
     <footer>
-      Source audio kept in French. Captions switch language without re-encoding the clip.
+      Source audio stays in French. Switch captions and transcript without re-encoding.
     </footer>
   </div>
 
 <script>
 const labels = { fr: "Français", en: "English", es: "Español" };
+let catalog = null;
+let current = null;
 let data = null;
 let lang = "en";
 
 const player = document.getElementById("player");
+const playerWrap = document.getElementById("player-wrap");
+const pickerEl = document.getElementById("picker");
 const cuesEl = document.getElementById("cues");
 const metaEl = document.getElementById("meta");
 const pillEl = document.getElementById("lang-pill");
@@ -272,13 +303,28 @@ function formatTime(t) {
   return `${m}:${s}`;
 }
 
+function mediaBase(item) {
+  return item.path.replace("translation.json", "media/");
+}
+
+function renderPicker() {
+  pickerEl.innerHTML = "";
+  catalog.videos.forEach((item) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pick-btn" + (current?.id === item.id ? " active" : "");
+    btn.innerHTML = `<strong>${item.label}</strong><small>${item.subtitle}</small>`;
+    btn.addEventListener("click", () => loadVideo(item));
+    pickerEl.appendChild(btn);
+  });
+}
+
 function renderCues() {
   cuesEl.innerHTML = "";
-  data.cues.forEach((cue, i) => {
+  data.cues.forEach((cue) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "cue";
-    btn.dataset.index = String(i);
     btn.innerHTML = `
       <span class="cue-time">${formatTime(cue.start)} – ${formatTime(cue.end)}</span>
       <div class="cue-text">${cue[lang]}</div>
@@ -286,9 +332,7 @@ function renderCues() {
     `;
     btn.addEventListener("click", async () => {
       const target = Math.min(cue.start + 0.05, Math.max(0, (player.duration || cue.end) - 0.05));
-      const seek = () => {
-        try { player.currentTime = target; } catch (_) {}
-      };
+      const seek = () => { try { player.currentTime = target; } catch (_) {} };
       if (player.readyState >= 1) seek();
       else player.addEventListener("loadedmetadata", seek, { once: true });
       try { await player.play(); } catch (_) {}
@@ -312,6 +356,7 @@ function setLanguage(next) {
 }
 
 function highlightActive() {
+  if (!data) return;
   const t = player.currentTime;
   const buttons = [...cuesEl.querySelectorAll(".cue")];
   let active = -1;
@@ -328,14 +373,50 @@ function highlightActive() {
   });
 }
 
-fetch("translation.json")
+function attachTracks(base) {
+  while (player.firstChild) player.removeChild(player.firstChild);
+  const source = document.createElement("source");
+  source.src = `${base}source.mp4`;
+  source.type = "video/mp4";
+  player.appendChild(source);
+  ["fr", "en", "es"].forEach((code, i) => {
+    const track = document.createElement("track");
+    track.kind = "captions";
+    track.srclang = code;
+    track.label = labels[code];
+    track.src = `${base}${code}.vtt`;
+    if (code === "en") track.default = true;
+    player.appendChild(track);
+  });
+}
+
+async function loadVideo(item) {
+  current = item;
+  renderPicker();
+  const res = await fetch(item.path);
+  data = await res.json();
+  const base = mediaBase(item);
+  const wasPlaying = !player.paused;
+  const prevTime = player.currentTime || 0;
+  attachTracks(base);
+  player.load();
+  playerWrap.classList.toggle("portrait", item.id === "soumillon");
+  const s = data.source;
+  metaEl.innerHTML = `<strong>${s.title}</strong><br>
+    From <a href="${s.url}" target="_blank" rel="noopener">${s.author}</a> · ${Math.round(s.duration)}s · FR → EN / ES`;
+  player.addEventListener("loadedmetadata", () => {
+    if (prevTime > 0 && prevTime < player.duration) player.currentTime = prevTime;
+    if (wasPlaying) player.play().catch(() => {});
+  }, { once: true });
+  setLanguage(lang);
+}
+
+fetch("catalog.json")
   .then((r) => r.json())
   .then((json) => {
-    data = json;
-    const s = json.source;
-    metaEl.innerHTML = `<strong>${s.title}</strong><br>
-      From <a href="${s.url}" target="_blank" rel="noopener">${s.author}</a> · ${Math.round(s.duration)}s · FR → EN / ES`;
-    setLanguage("en");
+    catalog = json;
+    const initial = catalog.videos.find((v) => v.default) || catalog.videos[0];
+    return loadVideo(initial);
   });
 
 document.querySelectorAll(".lang-btn").forEach((btn) => {
