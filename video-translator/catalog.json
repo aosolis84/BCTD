@@ -1,0 +1,17 @@
+{
+  "videos": [
+    {
+      "id": "head",
+      "label": "Christopher Head (Equidia)",
+      "subtitle": "Trainer · Prix du Calvados · Woot Woot",
+      "path": "videos/head/translation.json",
+      "default": true
+    },
+    {
+      "id": "soumillon",
+      "label": "Christophe Soumillon (Paris Turf)",
+      "subtitle": "Jockey · Sumbe Prix du Calvados · Woot Woot",
+      "path": "videos/soumillon/translation.json"
+    }
+  ]
+}
