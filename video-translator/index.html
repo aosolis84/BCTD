@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Translator — Woot Woot · Soumillon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --turf: #0f2a1f;
+    --turf-mid: #163528;
+    --leaf: #2d6a4f;
+    --gold: #d4a017;
+    --gold-soft: #f0d78c;
+    --cream: #f3efe4;
+    --ink: #0b1611;
+    --mist: rgba(243, 239, 228, 0.72);
+    --line: rgba(243, 239, 228, 0.14);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: Outfit, system-ui, sans-serif;
+    color: var(--cream);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(212, 160, 23, 0.18), transparent 55%),
+      radial-gradient(900px 500px at -10% 30%, rgba(45, 106, 79, 0.45), transparent 50%),
+      linear-gradient(165deg, #07150f 0%, var(--turf) 45%, #0a1c14 100%);
+  }
+
+  .shell {
+    width: min(1120px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1.5rem 0 3rem;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    animation: rise 0.7s ease both;
+  }
+
+  .brand {
+    font-family: Fraunces, Georgia, serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .brand span { color: var(--gold); }
+
+  .meta {
+    color: var(--mist);
+    font-size: 0.95rem;
+    max-width: 36rem;
+    line-height: 1.45;
+  }
+
+  .meta a { color: var(--gold-soft); }
+
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .stage { grid-template-columns: 1fr; }
+  }
+
+  .player-panel, .script-panel {
+    background: rgba(11, 22, 17, 0.55);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    animation: rise 0.8s ease both;
+  }
+
+  .script-panel { animation-delay: 0.08s; }
+
+  .player-wrap {
+    position: relative;
+    background: #000;
+    aspect-ratio: 9 / 16;
+    max-height: min(72vh, 640px);
+    margin: 0 auto;
+  }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #000;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.9rem 1rem 1.1rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .lang-btn {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--cream);
+    font: 500 0.85rem Outfit, sans-serif;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  }
+
+  .lang-btn:hover { border-color: rgba(212, 160, 23, 0.55); transform: translateY(-1px); }
+  .lang-btn.active {
+    background: var(--gold);
+    color: var(--ink);
+    border-color: var(--gold);
+  }
+
+  .script-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .script-head h2 {
+    font-family: Fraunces, Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+
+  .pill {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+    border: 1px solid rgba(212, 160, 23, 0.35);
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .cues {
+    max-height: min(72vh, 640px);
+    overflow: auto;
+    padding: 0.4rem 0.4rem 1rem;
+    scroll-behavior: smooth;
+  }
+
+  .cue {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 0.85rem 0.9rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .cue:hover { background: rgba(45, 106, 79, 0.28); }
+  .cue.active {
+    background: linear-gradient(90deg, rgba(212, 160, 23, 0.18), rgba(45, 106, 79, 0.22));
+    box-shadow: inset 3px 0 0 var(--gold);
+  }
+
+  .cue-time {
+    display: inline-block;
+    font-size: 0.72rem;
+    color: var(--gold-soft);
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.03em;
+  }
+
+  .cue-text {
+    line-height: 1.45;
+    font-size: 0.98rem;
+  }
+
+  .cue-src {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    color: var(--mist);
+    line-height: 1.4;
+  }
+
+  footer {
+    margin-top: 1.5rem;
+    color: var(--mist);
+    font-size: 0.85rem;
+    animation: rise 0.9s ease both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <div class="brand">Video <span>Translator</span></div>
+      </div>
+      <p class="meta" id="meta">Loading translation…</p>
+    </header>
+
+    <div class="stage">
+      <section class="player-panel">
+        <div class="player-wrap">
+          <video id="player" controls playsinline preload="metadata">
+            <source src="media/source.mp4" type="video/mp4">
+            <track id="track-fr" kind="captions" srclang="fr" label="Français" src="media/fr.vtt">
+            <track id="track-en" kind="captions" srclang="en" label="English" src="media/en.vtt" default>
+            <track id="track-es" kind="captions" srclang="es" label="Español" src="media/es.vtt">
+          </video>
+        </div>
+        <div class="controls" role="group" aria-label="Caption language">
+          <button class="lang-btn" data-lang="fr" type="button">Français</button>
+          <button class="lang-btn active" data-lang="en" type="button">English</button>
+          <button class="lang-btn" data-lang="es" type="button">Español</button>
+        </div>
+      </section>
+
+      <section class="script-panel">
+        <div class="script-head">
+          <h2>Synced transcript</h2>
+          <span class="pill" id="lang-pill">English</span>
+        </div>
+        <div class="cues" id="cues"></div>
+      </section>
+    </div>
+
+    <footer>
+      Source audio kept in French. Captions switch language without re-encoding the clip.
+    </footer>
+  </div>
+
+<script>
+const labels = { fr: "Français", en: "English", es: "Español" };
+let data = null;
+let lang = "en";
+
+const player = document.getElementById("player");
+const cuesEl = document.getElementById("cues");
+const metaEl = document.getElementById("meta");
+const pillEl = document.getElementById("lang-pill");
+
+function formatTime(t) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function renderCues() {
+  cuesEl.innerHTML = "";
+  data.cues.forEach((cue, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cue";
+    btn.dataset.index = String(i);
+    btn.innerHTML = `
+      <span class="cue-time">${formatTime(cue.start)} – ${formatTime(cue.end)}</span>
+      <div class="cue-text">${cue[lang]}</div>
+      ${lang === "fr" ? "" : `<div class="cue-src">${cue.fr}</div>`}
+    `;
+    btn.addEventListener("click", () => {
+      player.currentTime = cue.start + 0.01;
+      player.play();
+    });
+    cuesEl.appendChild(btn);
+  });
+  pillEl.textContent = labels[lang];
+}
+
+function setLanguage(next) {
+  lang = next;
+  document.querySelectorAll(".lang-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.lang === lang);
+  });
+  const tracks = player.textTracks;
+  for (let i = 0; i < tracks.length; i++) {
+    tracks[i].mode = tracks[i].language === lang ? "showing" : "disabled";
+  }
+  renderCues();
+  highlightActive();
+}
+
+function highlightActive() {
+  const t = player.currentTime;
+  const buttons = [...cuesEl.querySelectorAll(".cue")];
+  let active = -1;
+  data.cues.forEach((cue, i) => {
+    if (t >= cue.start && t < cue.end) active = i;
+  });
+  buttons.forEach((btn, i) => {
+    const on = i === active;
+    btn.classList.toggle("active", on);
+    if (on) {
+      const top = btn.offsetTop - cuesEl.clientHeight / 3;
+      if (Math.abs(cuesEl.scrollTop - top) > 48) cuesEl.scrollTop = top;
+    }
+  });
+}
+
+fetch("translation.json")
+  .then((r) => r.json())
+  .then((json) => {
+    data = json;
+    const s = json.source;
+    metaEl.innerHTML = `<strong>${s.title}</strong><br>
+      From <a href="${s.url}" target="_blank" rel="noopener">${s.author}</a> · ${Math.round(s.duration)}s · FR → EN / ES`;
+    setLanguage("en");
+  });
+
+document.querySelectorAll(".lang-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setLanguage(btn.dataset.lang));
+});
+
+player.addEventListener("timeupdate", highlightActive);
+player.addEventListener("seeked", highlightActive);
+</script>
+</body>
+</html>
